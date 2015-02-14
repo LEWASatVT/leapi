@@ -8,19 +8,23 @@ from sqlalchemy.dialects.postgresql import JSON
 class Site(db.Model):
     __tablename__ = 'sites'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Unicode, primary_key=True)
     name = db.Column(db.Unicode, unique=True)
+    description = db.Column(db.Unicode)
     instruments = db.relationship('Instrument', backref='site', lazy='dynamic')
+
+    @property
+    def json(self):
+        return dict(id=self.id, name=self.name, description=self.description)
 
 class Instrument(db.Model):
     __tablename__ = 'instruments'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode, unique=True)
-    site_id = db.Column(db.Integer, db.ForeignKey('sites.id'))
+    site_id = db.Column(db.Unicode, db.ForeignKey('sites.id'))
 
-
-    sensors = db.relationship('Sensor')
+    sensors = db.relationship('Sensor', backref='instrument')
 
     def __init__(self,name):
         self.name = name
@@ -28,15 +32,9 @@ class Instrument(db.Model):
     def __repr__(self):
         return '<id {}>'.format(self.id)
         
-class Sensor(db.Model):
-    __tablename__ = 'sensors'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Unicode)
-    instrument_id = db.Column(db.Integer, db.ForeignKey('instruments.id'))
-
-    def __init__(self,name):
-        self.name = name
+    @property
+    def json(self):
+        return dict(name=self.name)
 
 class Variable(db.Model):
     __tablename__ = 'variables'
@@ -45,12 +43,25 @@ class Variable(db.Model):
     name = db.Column(db.Unicode)
     medium = db.Column(db.Unicode)
     
+    sensors = db.relationship('Sensor', backref='variable')
+
     def __repr__(self):
         return "variable {}".format(self.name)
 
     @property
     def json(self):
         return dict(id=self.id, name=self.name, medium=self.medium)
+
+class Sensor(db.Model):
+    __tablename__ = 'sensors'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Unicode)
+    instrument_id = db.Column(db.Integer, db.ForeignKey('instruments.id'))
+    variable_id = db.Column(db.Integer, db.ForeignKey('variables.id'))
+
+    def __init__(self,name):
+        self.name = name
 
 class Unit(db.Model):
     __tablename__ = 'units'

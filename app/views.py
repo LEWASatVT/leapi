@@ -58,7 +58,30 @@ class VariableIndex(IndexView):
     per_page = 10
     
     def query(self):
-        return models.Variable.query.all()
+        return models.Variable.query
+
+class SensorResource(ResourceView):
+
+    def query(self):
+        return models.Sensor.query.get_or_404(self.url_kwargs['id'])
+
+class SensorIndex(ResourceView):
+    per_page = 10
+
+    def query(self):
+        return models.Sensor.query
+
+class SiteResource(ResourceView):
+    embedded = ['instrument']
+
+    def query(self):
+        return models.Site.query.get_or_404(self.url_kwargs['id'])
+
+class SiteIndex(IndexView):
+    per_page = 10
+    
+    def query(self):
+        return models.Site.query
 
 @app.route('/index')
 def index():
@@ -72,10 +95,25 @@ observation_resource = ObservationResource.as_view('observation')
 observation_index = ObservationIndex.as_view('observations', subresource_endpoint='observation')
 observation_form = ObservationForm.as_view('observation_form')
 
-app.add_url_rule('/variables', view_func=VariableIndex.as_view('variables', subresource_endpoint='variable'), methods=['GET'])
+sensor_resource = SensorResource.as_view('sensor')
+sensor_index = SensorIndex.as_view('sensors', subresource_endpoint='sensor')
+
+variable_resource = VariableResource.as_view('variable')
+variable_index = VariableIndex.as_view('variables')
+
+site_resource = SiteResource.as_view('site')
+site_index = SiteIndex.as_view('sites', subresource_endpoint='site')
+
+app.add_url_rule('/variables', view_func=VariableIndex.as_view('variables'), methods=['GET'])
 app.add_url_rule('/observations/<int:id>', view_func=observation_resource, methods=['GET'])
 app.add_url_rule('/observations', view_func=observation_index, methods=['GET'])
 app.add_url_rule('/observations', view_func=observation_form, methods=['POST', 'OPTIONS'])
+app.add_url_rule('/<string:id>', view_func=site_resource, methods=['GET'])
+app.add_url_rule('/sites/<string:id>', view_func=site_resource, methods=['GET'])
+app.add_url_rule('/sites', view_func=site_index, methods=['GET'])
+app.add_url_rule('/sensors/<int:id>', view_func=sensor_resource, methods=['GET'])
+app.add_url_rule('/sensors', view_func=sensor_index, methods=['GET'])
+
 
 @app.route('/observations2', methods=['POST', 'OPTIONS'])
 def add_observation():
