@@ -9,7 +9,7 @@ fields = {
     'medium': fields.String
 }
 
-class VariableResource(Resource):
+class MetricResource(Resource):
     @marshal_with(fields)
     def get(self, id = None):
         if id == None:

@@ -5,7 +5,7 @@ import json
 
 api = Api(app)
 
-from app.resources import SiteResource, InstrumentResource, SensorResource, VariableResource, ObservationResource
+from app.resources import SiteResource, InstrumentResource, SensorResource, MetricResource, ObservationResource, UnitResource
 
 @api.representation('application/json')
 def output_json(data, code, headers=None):
@@ -16,8 +16,13 @@ def output_json(data, code, headers=None):
 api.add_resource(SiteResource, '/sites', '/sites/<string:id>')
 api.add_resource(InstrumentResource, '/instruments', '/instruments/<int:id>')
 api.add_resource(SensorResource, '/sensors', '/sensors/<int:id>')
-api.add_resource(VariableResource, '/variables', '/variables/<int:id>')
+api.add_resource(MetricResource, '/metrics', '/metrics/<int:id>')
+api.add_resource(UnitResource, '/units', '/units/<int:id>')
 api.add_resource(ObservationResource, '/observations', '/observations/<int:id>')
+
+@app.route('/<string:site_id>/observations')
+def post_site_observation(site_id):
+    pass
 
 @app.errorhandler(404)
 def not_found(error):

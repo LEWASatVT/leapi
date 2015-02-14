@@ -10,7 +10,3 @@ class Unit(db.Model):
     
     def __repr__(self):
         return "{0} ({1})".format(self.name, self.abbv)
-
-    @property
-    def json(self):
-        return dict(id=self.id, name=self.name, abbv=self.abbv, type=self.type)
