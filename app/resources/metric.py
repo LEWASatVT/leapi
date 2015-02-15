@@ -1,7 +1,6 @@
 from app.models import Metric
-from flask.ext.restful import Resource
 from flask.ext.restful import fields
-from flask.ext.restful import marshal_with
+from app.hal import HalResource, marshal_with
 
 fields = {
     'id': fields.Integer,
@@ -9,7 +8,7 @@ fields = {
     'medium': fields.String
 }
 
-class MetricResource(Resource):
+class MetricResource(HalResource):
     @marshal_with(fields)
     def get(self, id = None):
         if id == None:

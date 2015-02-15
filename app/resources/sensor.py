@@ -1,9 +1,8 @@
 from app.models import Sensor,Instrument,Metric
-from flask.ext.restful import Resource
 from flask.ext.restful import fields
-from flask.ext.restful import marshal_with
 from json import dumps
-from flask.ext.restful import marshal
+
+from app.hal import HalResource, marshal_with
 
 fields = {
     'id': fields.Integer,
@@ -13,7 +12,7 @@ fields = {
                    }
 }
 
-class SensorResource(Resource):
+class SensorResource(HalResource):
     @marshal_with(fields)
     def get(self, id = None):
         if id == None:
