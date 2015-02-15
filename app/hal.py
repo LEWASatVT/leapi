@@ -39,10 +39,10 @@ class marshal_with(marshal_with):
         fields['_links'] = restful_fields.Raw
         super(marshal_with, self).__init__(fields, envelope)
 
-def make_self(uri, d):
+def make_self(uri, d, key='id'):
     print("d: {}".format(d))
-    if 'id' in d:
-        uri = uri + "/{}".format(d['id'])
+    if key in d:
+        uri = uri + "/{}".format(d[key])
     return { 'self': { 'href': uri } }
 
 def reorder(od):    
