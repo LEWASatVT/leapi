@@ -1,4 +1,4 @@
-from site import SiteResource
+from site import SiteResource, SiteList
 from instrument import InstrumentResource
 from sensor import SensorResource
 from metric import MetricResource

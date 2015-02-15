@@ -22,3 +22,8 @@ class SiteResource(Resource):
         else:
             site = Site.query.get_or_404(id)
         return site
+
+class SiteList(Resource):
+    @marshal_with(site_fields, envelope='sites')
+    def get(self):
+        return Site.query.all()

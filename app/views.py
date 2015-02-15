@@ -5,7 +5,7 @@ import json
 
 api = Api(app)
 
-from app.resources import SiteResource, InstrumentResource, SensorResource, MetricResource, ObservationResource, UnitResource
+from app.resources import SiteResource, SiteList, InstrumentResource, SensorResource, MetricResource, ObservationResource, UnitResource
 
 @api.representation('application/json')
 def output_json(data, code, headers=None):
@@ -13,6 +13,7 @@ def output_json(data, code, headers=None):
     resp.headers.extend(headers or {})
     return resp
 
+api.add_resource(SiteList, '/')
 api.add_resource(SiteResource, '/sites', '/sites/<string:id>')
 api.add_resource(InstrumentResource, '/instruments', '/instruments/<int:id>')
 api.add_resource(SensorResource, '/sensors', '/sensors/<int:id>')
