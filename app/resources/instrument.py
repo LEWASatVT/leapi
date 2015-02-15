@@ -17,5 +17,5 @@ class InstrumentResource(Resource):
         if id == None:
             r = Instrument.query.all()
         else:
-            r = Instrument.query.get_or_404(site_id)
+            r = Instrument.query.get_or_404(id)
         return r
