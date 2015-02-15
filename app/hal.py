@@ -1,3 +1,12 @@
+from flask.ext.restful import Resource
+from flask.ext.restful import marshal_with
+from flask.ext.restful import fields as restful_fields
+from flask.views import MethodViewType
+
+from app import api
+from functools import wraps
+
+## not currently used
 def makeLink():
     registry = {}
     def registrar(func):
@@ -9,6 +18,7 @@ def makeLink():
     registrar.all = registry
     return registrar
 
+## not currently used
 class HalView(object):
     link = makeLink()
 
@@ -20,7 +30,62 @@ class HalView(object):
             pass
         return l
 
-class MetaHal(type):
-    def __new__(cls,name, bases, attrs):
-        attrs['link'] = makeLink()
-        return type(name, (HalView,) + bases, attrs)
+class marshal_with(marshal_with):
+    ## TODO may need to override restful.marshal to get _embedded in there properly
+    def __init__(self, fields, envelope=None):
+        fields['_links'] = restful_fields.Raw
+        super(marshal_with, self).__init__(fields, envelope)
+
+def make_self(uri, d):
+    print("d: {}".format(d))
+    if 'id' in d:
+        uri = uri + "/{}".format(d['id'])
+    return { 'self': { 'href': uri } }
+
+def _halify(data, api, uri):
+    # TODO when would this list ever have more than a single item?
+    if isinstance(data, (list, tuple)):
+        for d in data:
+            d['_links'] = make_self(uri, d)
+    else:
+        data['_links'] = make_self(uri, data)
+    return data
+
+class halify(object):
+    def __init__(self, api):
+        self.api = api
+
+    def __call__(self, f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            resource = args[0]
+            print("halify: ({}, {})".format(resource, kwargs))
+            self_uri = self.api.url_for(resource)
+            resp = f(*args, **kwargs)
+            if isinstance(resp, tuple):
+                data, code, headers = unpack(resp)
+                return _halify(data, self.api, self_uri), code, headers
+            else:
+                return _halify(resp, self.api, self_uri)
+        return wrapper
+                
+class HalResourceType(MethodViewType):
+    def __new__(cls, name, bases, attrs):
+        if name.startswith('None'):
+            return None
+            
+        newattrs = {}
+        attrs['get'] = halify(api)(attrs['get'])
+        #for attrname, attrvalue in attr.iteritems():
+        if '_embedded' in attrs:
+            print("HalResourceType attrs: {}".format(attrs['_embedded']))
+        return super(HalResourceType, cls).__new__(cls, name, bases, attrs)
+
+    def __init__(self, name, bases, attrs):
+        super(HalResourceType, self).__init__(name, bases, attrs)
+
+class HalResource(Resource):
+    __metaclass__ = HalResourceType
+    def get(self):
+        pass
+
