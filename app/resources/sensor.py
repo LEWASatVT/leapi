@@ -2,12 +2,15 @@ from app.models import Sensor,Instrument,Metric
 from flask.ext.restful import Resource
 from flask.ext.restful import fields
 from flask.ext.restful import marshal_with
+from json import dumps
+from flask.ext.restful import marshal
 
 fields = {
     'id': fields.Integer,
     'name': fields.String,
-    'instrument_id': fields.Integer,
-    'variable_id': fields.Integer
+    '_embedded': { 'metric': fields.Nested( { 'medium': fields.String, 'name': fields.String } ),
+                   'instrument': fields.Nested( {'id': fields.Integer, 'name': fields.String} )
+                   }
 }
 
 class SensorResource(Resource):
