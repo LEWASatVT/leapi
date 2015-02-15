@@ -1,17 +1,19 @@
 from app import db
 from app.models import Unit
 
-from flask.ext.restful import Resource
 from flask.ext.restful import fields
-from flask.ext.restful import marshal_with
+
+from app.hal import HalResource, marshal_with
 
 fields = {
+    'id' : fields.Integer,
     'abbv': fields.String,
     'name': fields.String,
     'type': fields.String
 }
 
-class UnitResource(Resource):
+class UnitResource(HalResource):
+
     @marshal_with(fields)
     def get(self, id = None):
         if id == None:
