@@ -16,9 +16,10 @@ fields = {
     'datetime': fields.DateTime,
     'value': fields.Float,
     'site_id': fields.String,
-    'metric_id': fields.Integer,
-    'unit_id': fields.Integer,
-    'metric_id': fields.Integer
+    '_embedded': { 'units': fields.Nested ( { 'id': fields.Integer, 'abbv': fields.String, 'name': fields.String }),
+                   'metric': fields.Nested ( { 'id': fields.Integer, 'name': fields.String, 'medium': fields.String }),
+                   'sensor': fields.Nested ( { 'name': fields.String } )
+                   },
 }
 
 parser = reqparse.RequestParser()

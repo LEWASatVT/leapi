@@ -14,22 +14,7 @@ class Observation(db.Model):
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id'), nullable=False)
     metric_id = db.Column(db.Integer, db.ForeignKey('variables.id'), nullable=False)
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
+
     metric = db.relationship('Metric')
     units = db.relationship('Unit')
-
-    #def __repr__(self):
-    #    return "{0}: {1} {2}".format(self.datetime, self.value, self.units)
-
-    #@link
-    #def self(self):
-    #    return "/observation/{}".format(self.id)
-
-    #@link
-    #def timeseries(self):
-    #    return "/timeseries/{}".format(self.variable_id)
-
-    def links(self):
-        return [ {'timeseries': { 'href': '/timeseries/' }} ]
-
-    def curies(self):
-        return [{ 'name': 'le', 'href': 'http://example.com/docs/rels/{rel}', 'templated': True }]
+    sensor = db.relationship('Sensor')
