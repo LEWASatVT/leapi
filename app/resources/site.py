@@ -1,7 +1,7 @@
 from app.models import Site
 from flask.ext.restful import Resource
 from flask.ext.restful import fields
-from flask.ext.restful import marshal_with
+from app.hal import HalResource, marshal_with
 
 class Embedded(fields.Raw):
     def output(self, key, obj):
@@ -14,7 +14,9 @@ site_fields = {
     '_embedded': Embedded
 }
 
-class SiteResource(Resource):
+class SiteResource(HalResource):
+    _embedded = ['instruments']
+
     @marshal_with(site_fields)
     def get(self, id = None):
         if id == None:
@@ -23,7 +25,7 @@ class SiteResource(Resource):
             site = Site.query.get_or_404(id)
         return site
 
-class SiteList(Resource):
+class SiteList(HalResource):
     @marshal_with(site_fields, envelope='sites')
     def get(self):
         return Site.query.all()

@@ -7,9 +7,10 @@ from sqlalchemy.exc import IntegrityError,DataError
 
 from flask.ext.restful import Resource
 from flask.ext.restful import fields
-from flask.ext.restful import marshal_with
 from flask.ext.restful import reqparse
 from flask.ext.restful import abort
+
+from app.hal import HalResource, marshal_with
 
 fields = {
     'id': fields.Integer,
@@ -30,7 +31,7 @@ parser.add_argument('sensor_id', type=int, required=True, help="missing sensor i
 parser.add_argument('metric_id', type=int, required=True, help="missing metric id")
 parser.add_argument('site_id', type=str, required=True, help="missing site_id")
 
-class ObservationResource(Resource):
+class ObservationResource(HalResource):
     @marshal_with(fields)
     def get(self, id = None):
         if id == None:
