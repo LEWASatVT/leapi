@@ -1,15 +1,14 @@
-from app import app, models
-from flask.ext.restful import Api
+from app import app, api, models
 from flask import make_response
 import json
 
-api = Api(app)
 
 from app.resources import SiteResource, SiteList, InstrumentResource, SensorResource, MetricResource, ObservationResource, UnitResource
 
 @api.representation('application/json')
 def output_json(data, code, headers=None):
     resp = make_response(json.dumps(data), code)
+    #print("output_json.data: {}".format(data['_links']))
     resp.headers.extend(headers or {})
     return resp
 
