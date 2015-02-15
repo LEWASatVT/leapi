@@ -3,6 +3,8 @@ from flask.ext.restful import marshal_with
 from flask.ext.restful import fields as restful_fields
 from flask.views import MethodViewType
 
+from collections import OrderedDict
+
 from app import api
 from functools import wraps
 
@@ -42,13 +44,19 @@ def make_self(uri, d):
         uri = uri + "/{}".format(d['id'])
     return { 'self': { 'href': uri } }
 
+def reorder(od):
+    od = OrderedDict(sorted(od.iteritems()))
+    return od
+
 def _halify(data, api, uri):
     # TODO when would this list ever have more than a single item?
     if isinstance(data, (list, tuple)):
         for d in data:
             d['_links'] = make_self(uri, d)
+            d = reorder(d)
     else:
         data['_links'] = make_self(uri, data)
+        data = reorder(data)
     return data
 
 class halify(object):
