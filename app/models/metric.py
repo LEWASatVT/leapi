@@ -1,7 +1,9 @@
 from app import db
+from sqlalchemy import UniqueConstraint
 
 class Metric(db.Model):
     __tablename__ = 'variables'
+    __table_args__ = (UniqueConstraint('name','medium',name='uix_key'),)
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
