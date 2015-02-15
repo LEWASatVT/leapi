@@ -3,9 +3,15 @@ from flask.ext.restful import Resource
 from flask.ext.restful import fields
 from flask.ext.restful import marshal_with
 
+class Embedded(fields.Raw):
+    def output(self, key, obj):
+        print("key: {}, obj: {}".format(key,type(obj)))
+        return dict(instruments=[ dict(id=i.id, name=i.name) for i in obj.instruments ])
+
 site_fields = {
     'id': fields.String,
-    'name': fields.String
+    'name': fields.String,
+    '_embedded': Embedded
 }
 
 class SiteResource(Resource):
