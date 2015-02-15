@@ -9,7 +9,7 @@ class Instrument(db.Model):
     manufacturer = db.Column(db.Unicode)
     site_id = db.Column(db.Unicode, db.ForeignKey('sites.id'))
 
-    sensors = db.relationship('Sensor', backref='instrument')
+    sensors = db.relationship('Sensor', backref='instruments')
 
     def __init__(self,name):
         self.name = name
