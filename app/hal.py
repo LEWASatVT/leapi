@@ -2,6 +2,7 @@ from flask.ext.restful import Resource
 from flask.ext.restful import marshal_with
 from flask.ext.restful import fields as restful_fields
 from flask.views import MethodViewType
+from itertools import chain
 
 from collections import OrderedDict
 
@@ -44,9 +45,12 @@ def make_self(uri, d):
         uri = uri + "/{}".format(d['id'])
     return { 'self': { 'href': uri } }
 
-def reorder(od):
-    od = OrderedDict(sorted(od.iteritems()))
-    return od
+def reorder(od):    
+    hal = dict(_links=od['_links'])
+    if '_embedded' in od:
+        hal['_embedded'] = od['_embedded']
+    # Reorder OrderedDict so hal objects are first
+    return OrderedDict( ( (k, hal.get(k, od.get(k))) for k in chain(hal, od)) )
 
 def _halify(data, api, uri):
     # TODO when would this list ever have more than a single item?
