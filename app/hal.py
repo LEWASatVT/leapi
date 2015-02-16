@@ -37,7 +37,7 @@ class marshal_with(marshal_with):
     ## TODO may need to override restful.marshal to get _embedded in there properly
     def __init__(self, fields, envelope=None):
         fields['_links'] = restful_fields.Raw
-        super(marshal_with, self).__init__(fields, envelope)
+        super(marshal_with, self).__init__(fields)
 
 def make_self(uri, d):
     print("d: {}".format(d))
