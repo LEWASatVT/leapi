@@ -1,7 +1,7 @@
 from flask import request
 
 from app import db
-from app.models import Observation,Site,Sensor,Metric,Unit
+from app.models import Observation,Site,Sensor,Metric,Unit,Instrument
 
 from sqlalchemy.exc import IntegrityError,DataError
 
@@ -19,23 +19,38 @@ fields = {
     'site_id': fields.String,
     '_embedded': { 'units': fields.Nested ( { 'id': fields.Integer, 'abbv': fields.String, 'name': fields.String }),
                    'metric': fields.Nested ( { 'id': fields.Integer, 'name': fields.String, 'medium': fields.String }),
-                   'sensor': fields.Nested ( { 'name': fields.String } )
+                   'instrument': fields.Nested ( { 'name': fields.String } )
                    },
 }
 
-parser = reqparse.RequestParser()
-parser.add_argument('value', type=float, required=True, help="value cannot be blank")
-parser.add_argument('datetime', type=str, required=True, help="missing datetime")
-parser.add_argument('units', type=str, required=True, help="missing units")
-parser.add_argument('sensor_id', type=int, required=True, help="missing sensor id")
-parser.add_argument('metric_id', type=int, required=True, help="missing metric id")
-parser.add_argument('site_id', type=str, required=True, help="missing site_id")
+def by_id_or_filter(obj, args):
+    atname = obj.__name__.lower()
+    res = None
+    if 'id' in args[atname]:
+        res = obj.query.get(args[atname]['id'])
+    else:
+        res = obj.query.filter_by(**dict(args[atname].items())).first()
+    return res
 
 class ObservationResource(HalResource):
+    def __init__(self):
+        self.parser = reqparse.RequestParser()
+        self.parser.add_argument('value', type=float, required=True, help="value cannot be blank")
+        self.parser.add_argument('datetime', type=str, required=True, help="missing datetime")
+        self.parser.add_argument('units', type=dict, required=True, help="missing units")
+        self.parser.add_argument('instrument', type=dict, required=True, help="missing instrument")
+        self.parser.add_argument('metric', type=dict, required=True, help="missing metric")
+        self.parser.add_argument('site', type=dict, required=True, help="missing site_id")
+        super(ObservationResource,self).__init__()
+
     @marshal_with(fields)
     def get(self, id = None):
-        if id == None:
-            r = Observation.query.all()
+        if 'metric' in ( k.split('.')[0] for k in request.args.keys() ):
+            mkeys = [ k.split('.')[1] for k in request.args.keys() if k.split('.')[0] == 'metric' ]
+            filter_by = dict([ (k.split('.')[1], v) for k,v in request.args.items() if k.split('.')[0] == 'metric' ])
+            r = Observation.query.join(Observation.metric).filter_by(**filter_by).limit(200).all()
+        elif id == None:
+            r = Observation.query.order_by(Observation.datetime.desc()).limit(200).all()
         else:
             r = Observation.query.get_or_404(id)
         return r
@@ -46,27 +61,27 @@ class ObservationResource(HalResource):
             abort(400, message="request must be JSON")
         errors = []
         print("json: {}".format(request.json))
-        args = parser.parse_args(request)
-        r = Observation(datetime=args['datetime'], value=args['value'], units=args['units'])
-        site = Site.query.get(args['site_id'])
-        sensor = Sensor.query.get(args['sensor_id'])
-        metric = Metric.query.get(args['metric_id'])
-        unit = Unit.query.filter_by(abbv=args['units']).first()
+        args = self.parser.parse_args()
+        r = Observation(datetime=args['datetime'], value=args['value'])
+        site = by_id_or_filter(Site, args)
+        metric = by_id_or_filter(Metric, args)
+        instrument = by_id_or_filter(Instrument, args)
+        unit = Unit.query.filter_by(abbv=args['units']['abbv']).first()
         if site == None:
-            errors.append("No site with id: {}".format(args['site_id']))
+            errors.append("No site with: {}".format(args['site']))
         if unit == None:
             errors.append("No unit with abbv: {}".format(args['units']))
-        if sensor == None:
-            errors.append("No sensor with id: {}".format(args['sensor_id']))
+        if instrument == None:
+            errors.append("No instrument with: {}".format(args['instrument']))
         if metric == None:
-            errors.append("No metric with id: {}".format(args['metric_id']))
+            errors.append("No metric with: {}".format(args['metric']))
 
         if len(errors) > 0:
             return dict(messages=errors), 400
         r.site_id = site.id
         r.site = site
-        r.sensor = sensor
-        r.sensor_id = sensor.id
+        r.instrument = instrument
+        r.instrument_id = instrument.id
         r.metric = metric
         r.metric_id = metric.id
         r.units = unit
