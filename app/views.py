@@ -3,7 +3,7 @@ from flask import make_response
 import json
 
 
-from app.resources import SiteResource, SiteList, InstrumentResource, SensorResource, MetricResource, ObservationResource, UnitResource
+from app.resources import SiteResource, SiteList, InstrumentResource, SensorResource, MetricResource, ObservationResource, UnitResource, TimeseriesResource
 
 @api.representation('application/json')
 def output_json(data, code, headers=None):
@@ -19,6 +19,7 @@ api.add_resource(SensorResource, '/sensors', '/sensors/<int:id>')
 api.add_resource(MetricResource, '/metrics', '/metrics/<int:id>')
 api.add_resource(UnitResource, '/units', '/units/<int:id>')
 api.add_resource(ObservationResource, '/observations', '/observations/<int:id>')
+api.add_resource(TimeseriesResource, '/<string:site_id>/timeseries')
 
 @app.route('/<string:site_id>/observations')
 def post_site_observation(site_id):
