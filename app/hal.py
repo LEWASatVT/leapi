@@ -40,7 +40,6 @@ class marshal_with(marshal_with):
         super(marshal_with, self).__init__(fields, envelope)
 
 def make_self(uri, d, key='id'):
-    print("d: {}".format(d))
     if key in d:
         uri = uri + "/{}".format(d[key])
     return { 'self': { 'href': uri } }
@@ -72,7 +71,10 @@ class halify(object):
         def wrapper(*args, **kwargs):
             resource = args[0]
             print("halify: ({}, {})".format(resource, kwargs))
-            self_uri = self.api.url_for(resource)
+            try:
+                self_uri = self.api.url_for(resource)
+            except:
+                self_uri = '/unknown'
             resp = f(*args, **kwargs)
             if isinstance(resp, tuple):
                 data, code, headers = unpack(resp)
