@@ -1,9 +1,8 @@
-from app import app, api, models
+from app import app, api
 from flask import make_response
 import json
 
-
-from app.resources import SiteResource, SiteList, InstrumentResource, SensorResource, MetricResource, ObservationResource, UnitResource, TimeseriesResource
+from app.resources import *
 
 @api.representation('application/json')
 def output_json(data, code, headers=None):

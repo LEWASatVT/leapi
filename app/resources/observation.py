@@ -2,26 +2,15 @@ from flask import request
 
 from app import db
 from app.models import Observation,Site,Sensor,Metric,Unit,Instrument
+import app
 
 from sqlalchemy.exc import IntegrityError,DataError
 
-from flask.ext.restful import Resource
 from flask.ext.restful import fields
 from flask.ext.restful import reqparse
 from flask.ext.restful import abort
 
 from app.hal import HalResource, marshal_with
-
-fields = {
-    'id': fields.Integer,
-    'datetime': fields.DateTime,
-    'value': fields.Float,
-    'site_id': fields.String,
-    '_embedded': { 'units': fields.Nested ( { 'id': fields.Integer, 'abbv': fields.String, 'name': fields.String }),
-                   'metric': fields.Nested ( { 'id': fields.Integer, 'name': fields.String, 'medium': fields.String }),
-                   'instrument': fields.Nested ( { 'name': fields.String } )
-                   },
-}
 
 def by_id_or_filter(obj, args):
     atname = obj.__name__.lower()
@@ -33,6 +22,22 @@ def by_id_or_filter(obj, args):
     return res
 
 class ObservationResource(HalResource):
+    fields = {
+        'id': fields.Integer,
+        'datetime': fields.DateTime,
+        'value': fields.Float,
+        'site_id': fields.String
+    }
+    
+    _embedded = [ 'metric',
+                  'instrument',
+                  ('units', 'UnitResource'),
+              ]
+    #_embedded = { 'units': res.UnitResource,
+    #              'metric': res.MetricResource,
+    #              'instrument': res.InstrumentResource
+    #              }
+
     def __init__(self):
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('value', type=float, required=True, help="value cannot be blank")

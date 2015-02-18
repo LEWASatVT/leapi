@@ -5,14 +5,13 @@ from flask.ext.restful import fields
 
 from app.hal import HalResource, marshal_with
 
-fields = {
-    'id' : fields.Integer,
-    'abbv': fields.String,
-    'name': fields.String,
-    'type': fields.String
-}
-
 class UnitResource(HalResource):
+    fields = {
+        'id' : fields.Integer,
+        'abbv': fields.String,
+        'name': fields.String,
+        'type': fields.String
+    }
 
     @marshal_with(fields)
     def get(self, id = None):
