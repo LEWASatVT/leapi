@@ -6,7 +6,7 @@ from sqlalchemy import func
 from app import api
 
 def add_count(obj,count):
-    setattr(obj,'observation_count',count)
+    setattr(obj,'observationCount',count)
     return obj
 
 def add_site(obj,site):
@@ -18,7 +18,7 @@ class MetricResource(HalResource):
         'id': fields.Integer,
         'name': fields.String,
         'medium': fields.String,
-        'observation_count': fields.Integer
+        'observationCount': fields.Integer
     }
 
     _links = { 'timeseries': HalLink('TimeseriesResource', ['site_id','id']) }
@@ -27,7 +27,7 @@ class MetricResource(HalResource):
     def get(self, id = None):
         if id == None:
             # count how many observations each metric has associated with it
-            r = db.session.query(Metric,func.count()).join(Observation).group_by(Metric).all()
+            r = db.session.query(Metric,func.count()).outerjoin(Observation).group_by(Metric).all()
             print("r: {}".format(r))
             r = [ add_count(m,c) for (m,c) in r ]
             print("r: {}".format(r))

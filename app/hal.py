@@ -16,13 +16,15 @@ class Embedded(restful_fields.Raw):
         self.cls = cls
 
     def output(self, key, obj):
+        if obj is None:
+            return None
         if hasattr(self.cls, 'fields'):
             #print ("embedding {},{} with fields {}".format(key,obj.keys(), self.cls.fields))
             if hasattr(obj, '__getitem__'):
                 try:
                     return marshal(obj[key], self.cls.fields)
                 except KeyError,e:
-                    print("KeyError on {} ({})".format(obj.__name__,str(e)))
+                    print("KeyError on {} ({})".format(obj,str(e)))
             return marshal(obj, self.cls.fields)
         
     def __repr__(self):
@@ -118,6 +120,8 @@ class HalLink(restful_fields.Raw):
         self.attribute = 'get'
 
     def output(self, key, obj):
+        if obj is None:
+            return ""
         res = getResource(self.rname)
         #print("getting HalLink for {} with ({},{}) of type {}".format(res,key,obj,type(obj)))
         if hasattr(obj, '__dict__'):
