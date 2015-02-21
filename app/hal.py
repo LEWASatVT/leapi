@@ -19,13 +19,16 @@ class Embedded(restful_fields.Raw):
         if obj is None:
             return None
         if hasattr(self.cls, 'fields'):
-            #print ("embedding {},{} with fields {}".format(key,obj.keys(), self.cls.fields))
+            f = self.cls.fields
+            f.pop('_embedded', None)
             if hasattr(obj, '__getitem__'):
                 try:
-                    return marshal(obj[key], self.cls.fields)
+                    #print ("embedding {} with fields {}".format(key,obj[key], f))
+                    return marshal(obj[key], f)
                 except KeyError,e:
                     print("KeyError on {} ({})".format(obj,str(e)))
-            return marshal(obj, self.cls.fields)
+            #print ("embedding {},{} with fields {}".format(key,obj, f))
+            return marshal(getattr(obj,key), self.cls.fields)
         
     def __repr__(self):
         return "Embedded({})".format(self.cls.__name__)
@@ -108,7 +111,7 @@ def resourcePair(field):
     field_name = field[0] if isinstance(field, tuple) else field
     resource_name = field[1] if isinstance(field, tuple) else resourceName(field)
     obj = getResource(resource_name)
-    #print("obj for {} is {}".format(field,obj))
+    #print("obj for {} ({}) is {}".format(field,resource_name,obj))
     if obj:
         return (field_name, Embedded(obj))
     return (field_name, restful_fields.Raw)
@@ -126,7 +129,10 @@ class HalLink(restful_fields.Raw):
         #print("getting HalLink for {} with ({},{}) of type {}".format(res,key,obj,type(obj)))
         if hasattr(obj, '__dict__'):
             obj = obj.__dict__
-        obj = dict([ (k,v) for k,v in obj.items() if k in self.args ])
+        # turn self.args into a dict of k,v pairs: scalar a tursn to
+        # (a,a) while tuple (a,b) remains (a,b)
+        args = dict([ ((lambda x: x if isinstance(x, tuple) else (x,x))(a)) for a in self.args ])
+        obj = dict([ (args[k],v) for k,v in obj.items() if k in args ])
         if res:
             try:
                 return { 'href': api.url_for(res, **obj) }
@@ -148,11 +154,12 @@ class HalResourceType(MethodViewType):
 
         if '_embedded' in attrs:
             if hasattr(attrs['_embedded'], 'items'):
-                #print("building embedded dict from dict")
                 attrs['fields']['_embedded'] = dict([ (key, Embedded(obj)) for key,obj in attrs['_embedded'].items() ])
+                #print("building embedded dict from dict: {}".format(attrs['fields']['_embedded']))
             elif hasattr(attrs['_embedded'], '__iter__'):
                 #print("{}: building embedded dict from itterable".format(name))                
                 edict = dict([ resourcePair(f) for f in attrs['_embedded'] ])
+                #print("{}: edict: {}".format(name, edict))
                 edict = dict( [ (k,v) for k,v in edict.items() if isinstance(v, Embedded) ] )
                 #print("{}: edict: {}".format(name, edict))
                 attrs['fields']['_embedded'] = edict
