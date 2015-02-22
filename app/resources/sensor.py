@@ -1,4 +1,4 @@
-from app.models import Sensor,Instrument,Metric
+from app.models import Sensor,Instrument,Site,Metric
 from flask.ext.restful import fields
 from json import dumps
 
@@ -14,9 +14,12 @@ fields = {
 
 class SensorResource(HalResource):
     @marshal_with(fields)
-    def get(self, id = None):
+    def get(self, site_id, instrument_name, id = None):
+        print("getting sensors for {} at {}".format(instrument_name,site_id))
+        q = Sensor.query.join(Sensor.instrument,Site).filter(Site.id==site_id,Instrument.name==instrument_name)
         if id == None:
-            r = Sensor.query.all()
+            r = q.all()
         else:
-            r = Sensor.query.get_or_404(site_id)
+            print("getting sensors for {} at {}".format(instrument_name,site_id))
+            r = Sensor.query.get_or_404(id)
         return r

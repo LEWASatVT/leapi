@@ -7,6 +7,7 @@ site_fields = {
         'id': fields.String,
         'name': fields.String,
     }
+
 class SiteResource(HalResource):
     fields = site_fields
 
@@ -23,7 +24,7 @@ class SiteResource(HalResource):
 class SiteList(HalResource):
     fields = site_fields
 
-    _links = { 'metrics': HalLink('MetricResource', [('id','site_id')]),
+    _links = { 'metrics': HalLink('CountedMetricResource', [('id','site_id')]),
                'instruments': HalLink('InstrumentResource', [('id', 'site_id')])
            }
 

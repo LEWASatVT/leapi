@@ -13,33 +13,25 @@ def output_json(data, code, headers=None):
 
 api.add_resource(SiteList, '/', '/<string:id>')
 api.add_resource(SiteResource, '/sites', '/sites/<string:id>')
-api.add_resource(InstrumentResource, '/instruments', '/instruments/<int:id>', '/<string:site_id>/instruments')
-api.add_resource(SensorResource, '/sensors', '/sensors/<int:id>')
+api.add_resource(InstrumentResource, 
+                 '/sites/<string:site_id>/instruments',
+                 '/sites/<string:site_id>/instruments/<int:id>')
+api.add_resource(SensorResource, 
+                 '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors', 
+                 '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors/<int:id>')
 api.add_resource(CountedMetricResource, 
-                 '/metrics', 
-                 '/metrics/<int:id>', 
-                 '/<string:site_id>/metrics', 
-                 '/<string:site_id>/metrics/<int:id>')
-
-#api.add_resource(MetricResource, 
-#                  '/cmetrics', 
-#                  '/cmetrics/<int:id>', 
-#                  '/<string:site_id>/cmetrics', 
-#                  '/<string:site_id>/cmetrics/<int:id>')
+                 '/sites/<string:site_id>/metrics', 
+                 '/sites/<string:site_id>/metrics/<int:id>')
 
 api.add_resource(UnitResource, '/units', '/units/<int:id>')
 api.add_resource(ObservationResource, 
-                 '/observations', 
-                 '/observations/<int:id>',
-                 '/<string:site_id>/observations', 
-                 '/<string:site_id>/observations/<int:id>')
-api.add_resource(TimeseriesResource, '/<string:site_id>/timeseries')
+                 '/sites/<string:site_id>/instruments/<int:instrument_id>/observations',
+                 '/sites/<string:site_id>/instruments/<string:instrument_name>/observations',
+)
 
-#api.add_resource(MetricBySiteResource, '/<string:site_id>/metrics', '/<string:site_id>/metrics/<int:id>')
-
-@app.route('/<string:site_id>/observations')
-def post_site_observation(site_id):
-    return redirect(url_for('observationresource',site_id=site_id))
+api.add_resource(TimeseriesResource, 
+                 '/sites/<string:site_id>/metrics/<int:metric_id>/timeseries',
+)
 
 @app.errorhandler(404)
 def not_found(error):

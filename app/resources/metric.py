@@ -68,7 +68,7 @@ class CountedMetricResource(HalResource):
         'observationCount': fields.Integer(attribute='count')
     }
 
-    _links = { 'timeseries': HalLink('TimeseriesResource', ['site_id', ('id', 'metric.id')]) }
+    _links = { 'timeseries': HalLink('TimeseriesResource', ['site_id', ('id', 'metric_id')]) }
 
     @marshal_with(fields)
     def get(self, site_id=None, id=None):

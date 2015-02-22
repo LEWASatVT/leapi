@@ -47,8 +47,8 @@ class ObservationResource(HalResource):
         self.parser.add_argument('value', type=float, required=True, help="value cannot be blank")
         self.parser.add_argument('datetime', type=str, required=True, help="missing datetime")
         self.parser.add_argument('units', type=dict, required=True, help="missing units")
-        self.parser.add_argument('instrument', type=dict, required=True, help="missing instrument")
         self.parser.add_argument('metric', type=dict, required=True, help="missing metric")
+        self.parser.add_argument('instrument', type=dict, help="missing instrument")
         self.parser.add_argument('site', type=dict, help="missing site_id")
         self.parser.add_argument('sensor', type=dict) #TODO once established, make required
         super(ObservationResource,self).__init__()
@@ -66,11 +66,11 @@ class ObservationResource(HalResource):
         return r
 
     @marshal_with(fields)
-    def post(self, site_id=None):
+    def post(self, site_id=None, instrument_id=None, instrument_name=None):
         if not request.json:
             abort(400, message="request must be JSON")
         errors = []
-        #print("json: {}".format(request.json))
+
         args = self.parser.parse_args()
         r = Observation(datetime=args['datetime'], value=args['value'])
         if site_id:
@@ -78,8 +78,17 @@ class ObservationResource(HalResource):
         else:
             site = by_id_or_filter(Site, args)
 
+        if instrument_id and instrument_name:
+            abort(409, message="supply either instrument id OR instrument name")
+
+        if instrument_name:
+            instrument = Instrument.query.filter(Site.id==site.id, Instrument.name==instrument_name).first()
+        elif instrument_id:
+            instrument = Instrument.query.get(instrument_id)
+        else:
+            instrument = by_id_or_filter(Instrument, args)
+
         metric = by_id_or_filter(Metric, args)
-        instrument = by_id_or_filter(Instrument, args)
         unit = Unit.query.filter_by(abbv=args['units']['abbv']).first()
         sensor = by_id_or_filter(Sensor, args)
 

@@ -26,7 +26,7 @@ class TimeseriesResource(HalResource):
         'data': fields.Raw
     }
 
-    link_args = [ 'site_id' ]
+    link_args = [ 'site_id', 'metric_id' ]
 
     _embedded = [ ('metric', 'CountedMetricResource'),
                   ('units', 'UnitResource')
@@ -43,17 +43,20 @@ class TimeseriesResource(HalResource):
         super(TimeseriesResource,self).__init__()
 
     @marshal_with(fields)
-    def get(self, site_id):
+    def get(self, site_id, metric_id=None):
         #print("my endpoint is {}".format(self.endpoint))
         #print("my url is {}".format(api.url_for(self, site_id='stroubles1')))
         data = []
         filterexp = [Site.id==site_id]
 
         args = self.parser.parse_args()
-        if args['metric.id'] == None and (args['metric.medium'] == None or args['metric.name'] == None):
+        if metric_id == None and (args['metric.id'] == None and (args['metric.medium'] == None or args['metric.name'] == None)):
             abort(400, status=400, message="must supply either metric.id OR metric.name AND metric.medium")
 
-        if 'metric' in ( k.split('.')[0] for k in request.args.keys() ):
+        metric_id = metric_id if metric_id else args['metric.id']
+        if metric_id:
+            filterexp.append(Metric.id==metric_id)
+        elif 'metric' in ( k.split('.')[0] for k in request.args.keys() ):
             mkeys = [ k.split('.')[1] for k in request.args.keys() if k.split('.')[0] == 'metric' ]
             filter_by = dict([ (k.split('.')[1], v) for k,v in request.args.items() if k.split('.')[0] == 'metric' ])
             for k,v in filter_by.items():
@@ -69,16 +72,13 @@ class TimeseriesResource(HalResource):
             else:
                 abort(400, message="Could not parse date expression: '{}'".format(args['since']))
 
-        # TODO: DEBUG: filtering by site_id doesn't seem to work... all values are included in results
-        #print("filter: {}".format( [ "{}".format(f) for f in filterexp ]))
-
         #TODO: based on use of parse_args above, can probably clean
         #this up. Remember, argparse can have differnet
         #internal/external names too, which could be handy
-        r = Observation.query.join(Observation.metric).filter(*filterexp).order_by(Observation.datetime.desc()).all()
+        r = Observation.query.join(Observation.metric,Site).filter(*filterexp).order_by(Observation.datetime.desc()).all()
         if len(r) > 0:
             units = list(set([ o.units for o in r]))[0]
             metric = list(set([ o.metric for o in r]))[0]
             data = [ (ob.value, ob.datetime.isoformat()) for ob in r ]
-            return dict(data=data,metric=metric,units=units,site_id=site_id,length=len(r))
+            return dict(data=data,metric=metric,units=units,site_id=site_id,metric_id=metric.id,length=len(r))
         return dict(data=data,length=0)
