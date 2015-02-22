@@ -41,6 +41,7 @@ class ObservationResource(HalResource):
         self.parser.add_argument('instrument', type=dict, required=True, help="missing instrument")
         self.parser.add_argument('metric', type=dict, required=True, help="missing metric")
         self.parser.add_argument('site', type=dict, required=True, help="missing site_id")
+        self.parser.add_argument('sensor', type=dict) #TODO once established, make required
         super(ObservationResource,self).__init__()
 
     @marshal_with(fields)
@@ -67,6 +68,8 @@ class ObservationResource(HalResource):
         metric = by_id_or_filter(Metric, args)
         instrument = by_id_or_filter(Instrument, args)
         unit = Unit.query.filter_by(abbv=args['units']['abbv']).first()
+        sensor = by_id_or_filter(Sensor, args)
+
         if site == None:
             errors.append("No site with: {}".format(args['site']))
         if unit == None:
@@ -75,13 +78,23 @@ class ObservationResource(HalResource):
             errors.append("No instrument with: {}".format(args['instrument']))
         if metric == None:
             errors.append("No metric with: {}".format(args['metric']))
-
+        if sensor == None:
+            sensor = Sensor(name=metric.name,metric_id=metric.id,instrument_id=instrument.id)
+            db.session.add(s)
+            try:
+                db.session.commit()
+            except DataError as e:
+                abort(400, message=dict(data_error=str(e)))
+            except IntegrityError as e:
+                abort(409, message=dict(integrity_error=str(e)))
+            
         if len(errors) > 0:
             return dict(messages=errors), 400
         r.site_id = site.id
         r.site = site
         r.instrument = instrument
         r.instrument_id = instrument.id
+        r.sensor_id = sensor.id
         r.metric = metric
         r.metric_id = metric.id
         r.units = unit
