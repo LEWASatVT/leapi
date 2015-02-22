@@ -1,9 +1,9 @@
 from app.models import Instrument
-from flask.ext.restful import Resource
+from app.hal import HalResource, marshal_with
 from flask.ext.restful import fields
 from flask.ext.restful import marshal_with
 
-class InstrumentResource(Resource):
+class InstrumentResource(HalResource):
     fields = {
         'id': fields.Integer,
         'name': fields.String,
@@ -11,6 +11,8 @@ class InstrumentResource(Resource):
         'model': fields.String,
         'site_id': fields.String
     }
+
+    _embedded = ['site']
 
     @marshal_with(fields)
     def get(self, id = None):
