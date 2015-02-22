@@ -20,7 +20,8 @@ api.add_resource(CountedMetricResource,
                  '/metrics/<int:id>', 
                  '/<string:site_id>/metrics', 
                  '/<string:site_id>/metrics/<int:id>')
-# api.add_resource(CountedMetricResource, 
+
+#api.add_resource(MetricResource, 
 #                  '/cmetrics', 
 #                  '/cmetrics/<int:id>', 
 #                  '/<string:site_id>/cmetrics', 
