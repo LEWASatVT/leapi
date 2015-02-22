@@ -47,7 +47,8 @@ class TimeseriesResource(HalResource):
         #print("my endpoint is {}".format(self.endpoint))
         #print("my url is {}".format(api.url_for(self, site_id='stroubles1')))
         data = []
-        filterexp = []
+        filterexp = [Site.id==site_id]
+
         args = self.parser.parse_args()
         if args['metric.id'] == None and (args['metric.medium'] == None or args['metric.name'] == None):
             abort(400, status=400, message="must supply either metric.id OR metric.name AND metric.medium")
@@ -67,6 +68,9 @@ class TimeseriesResource(HalResource):
                 filterexp.append(Observation.datetime>=d)
             else:
                 abort(400, message="Could not parse date expression: '{}'".format(args['since']))
+
+        # TODO: DEBUG: filtering by site_id doesn't seem to work... all values are included in results
+        #print("filter: {}".format( [ "{}".format(f) for f in filterexp ]))
 
         #TODO: based on use of parse_args above, can probably clean
         #this up. Remember, argparse can have differnet
