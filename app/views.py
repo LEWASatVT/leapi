@@ -28,7 +28,11 @@ api.add_resource(CountedMetricResource,
 #                  '/<string:site_id>/cmetrics/<int:id>')
 
 api.add_resource(UnitResource, '/units', '/units/<int:id>')
-api.add_resource(ObservationResource, '/observations', '/observations/<int:id>')
+api.add_resource(ObservationResource, 
+                 '/observations', 
+                 '/observations/<int:id>',
+                 '/<string:site_id>/observations', 
+                 '/<string:site_id>/observations/<int:id>')
 api.add_resource(TimeseriesResource, '/<string:site_id>/timeseries')
 
 #api.add_resource(MetricBySiteResource, '/<string:site_id>/metrics', '/<string:site_id>/metrics/<int:id>')
