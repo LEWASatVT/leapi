@@ -10,4 +10,4 @@ app.config.from_object(os.environ['APP_SETTINGS'])
 db = SQLAlchemy(app)
 api = Api(app)
 
-from app import views,models,resources
+import views,models,resources

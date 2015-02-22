@@ -8,3 +8,6 @@ class Site(db.Model):
     description = db.Column(db.Unicode)
     instruments = db.relationship('Instrument', backref='site', lazy='dynamic')
 
+
+    def __repr__(self):
+        return "{}: {}".format(self.id, self.name)

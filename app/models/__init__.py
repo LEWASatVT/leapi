@@ -1,7 +1,7 @@
 from observation import Observation
 from site import Site
 from unit import Unit
-from metric import Metric
+from metric import Metric, CountedMetric
 from instrument import Instrument
 from sensor import Sensor
 

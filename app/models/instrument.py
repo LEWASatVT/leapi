@@ -15,4 +15,4 @@ class Instrument(db.Model):
         self.name = name
 
     def __repr__(self):
-        return '<id {}>'.format(self.id)
+        return '<instrument id {}>'.format(self.id)

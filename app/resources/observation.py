@@ -2,26 +2,15 @@ from flask import request
 
 from app import db
 from app.models import Observation,Site,Sensor,Metric,Unit,Instrument
+import app
 
 from sqlalchemy.exc import IntegrityError,DataError
 
-from flask.ext.restful import Resource
 from flask.ext.restful import fields
 from flask.ext.restful import reqparse
 from flask.ext.restful import abort
 
 from app.hal import HalResource, marshal_with
-
-fields = {
-    'id': fields.Integer,
-    'datetime': fields.DateTime,
-    'value': fields.Float,
-    'site_id': fields.String,
-    '_embedded': { 'units': fields.Nested ( { 'id': fields.Integer, 'abbv': fields.String, 'name': fields.String }),
-                   'metric': fields.Nested ( { 'id': fields.Integer, 'name': fields.String, 'medium': fields.String }),
-                   'instrument': fields.Nested ( { 'name': fields.String } )
-                   },
-}
 
 def by_id_or_filter(obj, args):
     atname = obj.__name__.lower()
@@ -33,6 +22,22 @@ def by_id_or_filter(obj, args):
     return res
 
 class ObservationResource(HalResource):
+    fields = {
+        'id': fields.Integer,
+        'datetime': fields.DateTime,
+        'value': fields.Float,
+        'site_id': fields.String
+    }
+    
+    _embedded = [ ('metric','CountedMetricResource'),
+                  'instrument',
+                  ('units', 'UnitResource'),
+              ]
+    #_embedded = { 'units': res.UnitResource,
+    #              'metric': res.MetricResource,
+    #              'instrument': res.InstrumentResource
+    #              }
+
     def __init__(self):
         self.parser = reqparse.RequestParser()
         self.parser.add_argument('value', type=float, required=True, help="value cannot be blank")
@@ -61,7 +66,7 @@ class ObservationResource(HalResource):
         if not request.json:
             abort(400, message="request must be JSON")
         errors = []
-        print("json: {}".format(request.json))
+        #print("json: {}".format(request.json))
         args = self.parser.parse_args()
         r = Observation(datetime=args['datetime'], value=args['value'])
         site = by_id_or_filter(Site, args)
@@ -73,7 +78,7 @@ class ObservationResource(HalResource):
         if site == None:
             errors.append("No site with: {}".format(args['site']))
         if unit == None:
-            errors.append("No unit with abbv: {}".format(args['units']))
+            errors.append("No unit with abbv: {}".format(args['units']['abbv']))
         if instrument == None:
             errors.append("No instrument with: {}".format(args['instrument']))
         if metric == None:
@@ -89,6 +94,7 @@ class ObservationResource(HalResource):
                 abort(409, message=dict(integrity_error=str(e)))
             
         if len(errors) > 0:
+            print("errors: {}".format(errors))
             return dict(messages=errors), 400
         r.site_id = site.id
         r.site = site
@@ -102,7 +108,7 @@ class ObservationResource(HalResource):
         try:
             db.session.commit()
         except DataError, e:
-            abort(400, message=dict(data_error=e.message))
+            abort(400, message=dict(data_error=str(e),r=r))
         except IntegrityError, e:
             abort(409, message=dict(integrity_error=e.message))
         return r, 201
