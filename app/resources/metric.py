@@ -68,6 +68,8 @@ class CountedMetricResource(HalResource):
         'observationCount': fields.Integer(attribute='count')
     }
 
+    link_args = ['site_id']
+
     _links = { 'timeseries': HalLink('TimeseriesResource', ['site_id', ('id', 'metric_id')]) }
 
     @marshal_with(fields)
@@ -89,5 +91,5 @@ class CountedMetricResource(HalResource):
             if not q.first():
                 abort(404)
             r = q.first()
-            
+
         return r
