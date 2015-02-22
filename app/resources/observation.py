@@ -31,6 +31,7 @@ class ObservationResource(HalResource):
     
     _embedded = [ ('metric','CountedMetricResource'),
                   'instrument',
+                  'sensor',
                   ('units', 'UnitResource'),
               ]
     #_embedded = { 'units': res.UnitResource,

@@ -12,6 +12,7 @@ class Observation(db.Model):
     datetime = db.Column(db.DateTime)
     site_id = db.Column(db.String, db.ForeignKey('sites.id'), nullable=False)
     instrument_id = db.Column(db.Integer, db.ForeignKey('instruments.id'), nullable=False)
+    sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id') ) #TODO once established, make nullable=False
     metric_id = db.Column(db.Integer, db.ForeignKey('variables.id'), nullable=False)
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
 
