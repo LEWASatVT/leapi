@@ -71,7 +71,7 @@ class TimeseriesResource(HalResource):
         #TODO: based on use of parse_args above, can probably clean
         #this up. Remember, argparse can have differnet
         #internal/external names too, which could be handy
-        r = Observation.query.join(Observation.metric).filter(*filterexp).order_by(Observation.datetime.desc()).limit(1440).all()
+        r = Observation.query.join(Observation.metric).filter(*filterexp).order_by(Observation.datetime.desc()).all()
         if len(r) > 0:
             units = list(set([ o.units for o in r]))[0]
             metric = list(set([ o.metric for o in r]))[0]
