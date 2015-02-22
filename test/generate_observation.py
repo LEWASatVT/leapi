@@ -2,6 +2,15 @@
 
 import datetime
 import random
-obs = dict(value=random.randint(1,10), datetime=str(datetime.datetime.now()), unit_id=dict(id='1'), variable_id=dict(id='1'))
+import json
 
-print(obs)
+obs = dict(site=dict(id='test1'),
+           value=42.42, 
+           datetime=str(datetime.datetime.now()), 
+           units=dict(abbv='mS/cm'), 
+           metric=dict(name='specific conductance', medium='water'),
+           sensor=dict(name='specific conductance',instrument_id=5),
+           instrument=dict(id=5,name="sonde")
+)
+
+print(json.dumps(obs))

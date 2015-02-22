@@ -74,7 +74,6 @@ class ObservationResource(HalResource):
         args = self.parser.parse_args()
         r = Observation(datetime=args['datetime'], value=args['value'])
         if site_id:
-            print("getting site from url")
             site = Site.query.get(site_id)
         else:
             site = by_id_or_filter(Site, args)
