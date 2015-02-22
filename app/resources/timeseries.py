@@ -28,7 +28,7 @@ class TimeseriesResource(HalResource):
 
     link_args = [ 'site_id' ]
 
-    _embedded = [ 'metric',
+    _embedded = [ ('metric', 'CountedMetricResource'),
                   ('units', 'UnitResource')
               ]
 
