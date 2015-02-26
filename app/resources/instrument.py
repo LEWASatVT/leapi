@@ -13,7 +13,8 @@ class InstrumentResource(HalResource):
         'site_id': fields.String
     }
 
-    _embedded = ['site']
+    link_args = ['site_id']
+    _embedded = ['site', ('sensors','SensorResource')]
 
     def __init__(self):
         self.parser = reqparse.RequestParser()

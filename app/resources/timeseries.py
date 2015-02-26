@@ -1,6 +1,7 @@
 from flask import request
+import itertools
 
-from app.models import Observation,Site,Sensor,Metric,Unit,Instrument
+from app.models import Observation,Site,Sensor,Metric,Unit,Instrument,CountedMetric
 #from app.resources import MetricResource,UnitResource
 #from app import resources as res
 
@@ -19,6 +20,15 @@ from app.dateparser import DateParser
 
 TZ = pytz.timezone('US/Eastern')
 
+def make_ts(r,instrument_id,site_id):
+    units = list(set([ o.units for o in r]))[0]
+    metric = list(set([ o.metric for o in r]))[0]
+    data = [ (ob.value, ob.datetime.isoformat()) for ob in r ]
+    instrument = Instrument.query.get(instrument_id)
+    for o in [ metric, instrument ]:
+        setattr(o,'site_id',site_id)
+    return dict(data=data,instrument=instrument,metric=metric,metric_id=metric.id,units=units,site_id=site_id,length=len(data))
+
 class TimeseriesResource(HalResource):
     
     fields = {
@@ -29,7 +39,8 @@ class TimeseriesResource(HalResource):
     link_args = [ 'site_id', 'metric_id' ]
 
     _embedded = [ ('metric', 'CountedMetricResource'),
-                  ('units', 'UnitResource')
+                  ('units', 'UnitResource'),
+                  ('instrument')
               ]
 
     def __init__(self):
@@ -38,6 +49,7 @@ class TimeseriesResource(HalResource):
         self.parser.add_argument('metric.name', type=str)
         self.parser.add_argument('metric.medium', type=str)
         self.parser.add_argument('since', type=str)
+        self.parser.add_argument('limit', type=int)
         self.dateparser =  DateParser()
 
         super(TimeseriesResource,self).__init__()
@@ -47,7 +59,7 @@ class TimeseriesResource(HalResource):
         #print("my endpoint is {}".format(self.endpoint))
         #print("my url is {}".format(api.url_for(self, site_id='stroubles1')))
         data = []
-        filterexp = [Site.id==site_id]
+        filterexp = [Site.id==site_id,Observation.site_id==Site.id,Observation.instrument_id==Instrument.id]
 
         args = self.parser.parse_args()
         if metric_id == None and (args['metric.id'] == None and (args['metric.medium'] == None or args['metric.name'] == None)):
@@ -75,10 +87,11 @@ class TimeseriesResource(HalResource):
         #TODO: based on use of parse_args above, can probably clean
         #this up. Remember, argparse can have differnet
         #internal/external names too, which could be handy
-        r = Observation.query.join(Observation.metric,Site).filter(*filterexp).order_by(Observation.datetime.desc()).all()
-        if len(r) > 0:
-            units = list(set([ o.units for o in r]))[0]
-            metric = list(set([ o.metric for o in r]))[0]
-            data = [ (ob.value, ob.datetime.isoformat()) for ob in r ]
-            return dict(data=data,metric=metric,units=units,site_id=site_id,metric_id=metric.id,length=len(r))
-        return dict(data=data,length=0)
+        q = Observation.query.join(Observation.metric,Site,Instrument).filter(*filterexp).order_by(Observation.instrument_id,Observation.datetime.desc()).group_by(Observation.instrument_id,Observation.id)
+        if args['limit']:
+            q = q.limit(args['limit'])
+        r = q.all()
+                    
+        grp = [ make_ts(list(k),g,site_id) for g,k in itertools.groupby(r,lambda x: x.instrument_id) ]
+        grp = grp[0] if len(grp)==1 else grp
+        return grp

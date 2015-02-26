@@ -68,7 +68,7 @@ class CountedMetricResource(HalResource):
         'observationCount': fields.Integer(attribute='count')
     }
 
-    link_args = ['site_id']
+    link_args = ['site_id', ('metric_id', 'id')]
 
     _links = { 'timeseries': HalLink('TimeseriesResource', ['site_id', ('id', 'metric_id')]) }
 
@@ -87,9 +87,10 @@ class CountedMetricResource(HalResource):
         if id == None:
             # count how many observations each metric has associated with it
             r = q.all()
+            r = [ m for m in r ]
         else:
             if not q.first():
                 abort(404)
             r = q.first()
-
+            setattr(r, 'site_id',site_id)
         return r

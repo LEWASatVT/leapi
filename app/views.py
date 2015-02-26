@@ -11,7 +11,7 @@ def output_json(data, code, headers=None):
     resp.headers.extend(headers or {})
     return resp
 
-api.add_resource(SiteList, '/', '/<string:id>')
+api.add_resource(SiteList, '/')
 api.add_resource(SiteResource, '/sites', '/sites/<string:id>')
 api.add_resource(InstrumentResource, 
                  '/sites/<string:site_id>/instruments',

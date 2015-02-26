@@ -11,7 +11,7 @@ site_fields = {
 class SiteResource(HalResource):
     fields = site_fields
 
-    #_embedded = ['instruments']
+    _embedded = ['instruments']
 
     @marshal_with(fields)
     def get(self, id = None):
@@ -19,6 +19,7 @@ class SiteResource(HalResource):
             site = Site.query.all()
         else:
             site = Site.query.get_or_404(id)
+            print("site instruments: {}".format(type(site.instruments)))
         return site
 
 class SiteList(HalResource):
@@ -28,7 +29,7 @@ class SiteList(HalResource):
                'instruments': HalLink('InstrumentResource', [('id', 'site_id')])
            }
 
-    _embedded = ['instrument']
+    _embedded = [('instruments','InstrumentResource')]
     
     @marshal_with(SiteResource.fields, envelope='sites')
     def get(self,id=None):

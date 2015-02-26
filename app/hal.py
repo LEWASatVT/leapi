@@ -11,33 +11,6 @@ from app import api
 from functools import wraps
 import resources
 
-class Embedded(restful_fields.Raw):
-    def __init__(self, cls):
-        self.cls = cls
-
-    def output(self, key, obj):
-        if obj is None:
-            return None
-        if hasattr(self.cls, 'fields'):
-            f = self.cls.fields
-            f.pop('_embedded', None)
-            if hasattr(obj, '__getitem__'):
-                try:
-                    #print ("embedding {} with fields {}".format(key,obj[key], f))
-                    return marshal(obj[key], f)
-                except KeyError,e:
-                    print("KeyError on {} ({})".format(obj,str(e)))
-            #print ("embedding {},{} with fields {}".format(key,obj, f))
-            return marshal(getattr(obj,key), self.cls.fields)
-        
-    def __repr__(self):
-        return "Embedded({})".format(self.cls.__name__)
-    #def output(self, key, obj):
-    #    print("{}: {}".format(key,obj[key]))
-    #    if hasattr(self.cls, 'fields'):
-    #        return marshal(obj[key], self.cls.fields)
-    #    return marshal(obj, {})
-
 class marshal_with(marshal_with):
     ## TODO may need to override restful.marshal to get _embedded in there properly
     def __init__(self, fields, envelope=None):
@@ -105,16 +78,53 @@ def getResource(field):
     try:
         return getattr(resources,resource_name)
     except AttributeError,e:
+        print("no {} found in resources: {}".format(resource_name,[ (k,v) for k,v in resources.__dict__.items() if hasattr(v,'poodlydoo')]))
         return None
 
 def resourcePair(field):
     field_name = field[0] if isinstance(field, tuple) else field
     resource_name = field[1] if isinstance(field, tuple) else resourceName(field)
-    obj = getResource(resource_name)
+    return (field_name, Embedded(resource_name))
+    #return (field_name, restful_fields.List(Embedded(resource_name)))
+    #obj = getResource(resource_name)
     #print("obj for {} ({}) is {}".format(field,resource_name,obj))
-    if obj:
-        return (field_name, Embedded(obj))
-    return (field_name, restful_fields.Raw)
+    #if obj:
+    #    return (field_name, Embedded(obj))
+    #return (field_name, restful_fields.Raw)
+
+class Embedded(restful_fields.Raw):
+    def __init__(self, cls_name):
+        self.cls_name = cls_name
+
+    def output(self, key, obj):
+        self.cls = getResource(self.cls_name)
+        #print("embedding {}.{}".format(obj,key))
+        if obj is None:
+            return None
+        if hasattr(self.cls, 'fields'):
+            f = self.cls.fields
+            f.pop('_embedded', None)
+            if hasattr(obj, '__getitem__'):
+                try:
+                    #print ("embedding {} with fields {}".format(key,obj[key], f))
+                    return marshal(obj[key], f)
+                except KeyError,e:
+                    print("KeyError on {} ({})".format(obj,str(e)))
+            #print ("embedding {}.{} with fields {}".format(obj,key, f))
+
+            embedded = getattr(obj,key)
+            #print("type {}".format(type(embedded)))
+            if hasattr(embedded, 'all'):
+                return [ marshal(e,f) for e in embedded.all() ]
+            return marshal(embedded, f)
+        
+    def __repr__(self):
+        return "Embedded({})".format(self.cls_name)
+    #def output(self, key, obj):
+    #    print("{}: {}".format(key,obj[key]))
+    #    if hasattr(self.cls, 'fields'):
+    #        return marshal(obj[key], self.cls.fields)
+    #    return marshal(obj, {})
 
 class HalLink(restful_fields.Raw):
     def __init__(self,name, args):
@@ -152,6 +162,10 @@ class HalResourceType(MethodViewType):
         if 'fields' in attrs:
             attrs['fields']['_links'] = { 'self': HalLink(name, attrs['_link_args']) }
 
+        # TODO: this should just populate something with functions
+        # that are called when needed, I think at this point if some
+        # resources haven't been created yet no Embedded(obj) is
+        # created for them
         if '_embedded' in attrs:
             if hasattr(attrs['_embedded'], 'items'):
                 attrs['fields']['_embedded'] = dict([ (key, Embedded(obj)) for key,obj in attrs['_embedded'].items() ])
@@ -163,6 +177,7 @@ class HalResourceType(MethodViewType):
                 edict = dict( [ (k,v) for k,v in edict.items() if isinstance(v, Embedded) ] )
                 #print("{}: edict: {}".format(name, edict))
                 attrs['fields']['_embedded'] = edict
+                #attrs['fields']['_embedded'] = restful_fields.List(Embedded('InstrumentResource'))
 
         if '_links' in attrs:
             for t,l in attrs['_links'].items():
@@ -177,3 +192,4 @@ class HalResource(Resource):
     __metaclass__ = HalResourceType
     def get(self):
         pass
+
