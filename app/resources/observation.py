@@ -1,7 +1,7 @@
 from flask import request
 
 from app import db
-from app.models import Observation,Site,Sensor,Metric,Unit,Instrument
+from app.models import Observation,Site,Sensor,Metric,Unit,Instrument,OffsetType
 import app
 
 from sqlalchemy.exc import IntegrityError,DataError
@@ -12,8 +12,8 @@ from flask.ext.restful import abort
 
 from app.hal import HalResource, marshal_with
 
-def by_id_or_filter(obj, args):
-    atname = obj.__name__.lower()
+def by_id_or_filter(obj, args, atname=None):
+    atname = obj.__name__.lower() if atname == None else atname
     res = None
     if atname not in args or not args[atname]:
         return None
@@ -50,17 +50,21 @@ class ObservationResource(HalResource):
         self.parser.add_argument('metric', type=dict, required=True, help="missing metric")
         self.parser.add_argument('instrument', type=dict, help="missing instrument")
         self.parser.add_argument('site', type=dict, help="missing site_id")
-        self.parser.add_argument('sensor', type=dict) #TODO once established, make required
+        self.parser.add_argument('sensor', type=dict) #TODO once established, make required 
+        self.parser.add_argument('offset', type=dict)
+        self.parser.add_argument('stderr', type=float)
         super(ObservationResource,self).__init__()
 
     @marshal_with(fields)
-    def get(self, id = None):
+    def get(self, site_id, instrument_name, id = None):
+        print("getting measurement for {} at {}".format(instrument_name,site_id))
+        filterexp = [Site.id==site_id,Instrument.name==instrument_name,Observation.site_id==site_id,Observation.instrument_id==Instrument.id]
         if 'metric' in ( k.split('.')[0] for k in request.args.keys() ):
             mkeys = [ k.split('.')[1] for k in request.args.keys() if k.split('.')[0] == 'metric' ]
             filter_by = dict([ (k.split('.')[1], v) for k,v in request.args.items() if k.split('.')[0] == 'metric' ])
-            r = Observation.query.join(Observation.metric).filter_by(**filter_by).limit(200).all()
+            r = Observation.query.join(Site,Instrument,Observation.metric).filter(*filterexp).limit(200).all()
         elif id == None:
-            r = Observation.query.order_by(Observation.datetime.desc()).limit(200).all()
+            r = Observation.query.join(Site,Instrument).filter(*filterexp).order_by(Observation.datetime.desc()).limit(200).all()
         else:
             r = Observation.query.get_or_404(id)
         return r
@@ -91,7 +95,7 @@ class ObservationResource(HalResource):
         metric = by_id_or_filter(Metric, args)
         unit = Unit.query.filter_by(abbv=args['units']['abbv']).first()
         sensor = by_id_or_filter(Sensor, args)
-
+        
         if site == None:
             errors.append("No site with: {}".format(args['site']))
         if unit == None:
@@ -129,6 +133,15 @@ class ObservationResource(HalResource):
         r.metric = metric
         r.metric_id = metric.id
         r.units = unit
+        r.stderr = args['stderr']
+        if args['offset']:
+            offset = OffsetType.query.filter_by(description=args['offset']['type']).first()
+            r.offset_value = args['offset']['value']
+            r.offset_type_id = offset.id
+
+        #r.offset_value = args['offset_value']
+        #r.offset_type = OffsetType.query.get(args['offset_type']['id'])
+
         db.session.add(r)
         try:
             db.session.commit()
