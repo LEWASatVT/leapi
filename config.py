@@ -18,6 +18,7 @@ class StagingConfig(Config):
 class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
+    SERVER_NAME = "localhost:5050"
 
 class TestingConfig(Config):
     TESTING = True

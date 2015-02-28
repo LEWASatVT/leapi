@@ -1,5 +1,5 @@
-from app import db
-from app.models import Instrument,Metric
+from leapi import db
+from leapi.models import Instrument,Metric
 
 class Sensor(db.Model):
     __tablename__ = 'sensors'

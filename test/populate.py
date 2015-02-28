@@ -3,7 +3,7 @@ import sys
 sys.path.append('./')
 sys.path.append('../')
 
-from app import db, models
+from leapi import db, models
 
 variables = [ ('flow','water'),
               ('velocity','water'),

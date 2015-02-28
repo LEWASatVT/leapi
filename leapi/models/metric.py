@@ -1,4 +1,4 @@
-from app import db
+from leapi import db
 from sqlalchemy import UniqueConstraint
 
 class Metric(db.Model):

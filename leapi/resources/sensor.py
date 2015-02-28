@@ -1,8 +1,8 @@
-from app.models import Sensor,Instrument,Site,Metric,Unit
+from leapi.models import Sensor,Instrument,Site,Metric,Unit
 from flask.ext.restful import fields
 from json import dumps
 
-from app.hal import HalResource, HalLink, marshal_with
+from leapi.hal import HalResource, HalLink, marshal_with
 
 class SensorResource(HalResource):
     fields = {

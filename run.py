@@ -1,5 +1,5 @@
 #!/bin/env python
-from app import app,db,models
+from leapi import app
 
 # useful tutorials:
 # https://realpython.com/blog/python/flask-by-example-part-2-postgres-sqlalchemy-and-alembic/

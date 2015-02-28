@@ -1,8 +1,8 @@
-from app import app, api
+from leapi import app, api
 from flask import make_response,redirect,url_for
 import json
 
-from app.resources import *
+from leapi.resources import *
 
 @api.representation('application/json')
 def output_json(data, code, headers=None):
@@ -11,6 +11,7 @@ def output_json(data, code, headers=None):
     resp.headers.extend(headers or {})
     return resp
 
+print("loading views")
 api.add_resource(SiteList, '/')
 api.add_resource(SiteResource, '/sites', '/sites/<string:id>')
 api.add_resource(InstrumentResource, 

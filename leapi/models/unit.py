@@ -1,4 +1,4 @@
-from app import db
+from leapi import db
 
 class Unit(db.Model):
     __tablename__ = 'units'

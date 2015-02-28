@@ -1,9 +1,9 @@
-from app import db
-from app.models import Unit
+from leapi import db
+from leapi.models import Unit
 
 from flask.ext.restful import fields
 
-from app.hal import HalResource, marshal_with
+from leapi.hal import HalResource, marshal_with
 
 class UnitResource(HalResource):
     fields = {

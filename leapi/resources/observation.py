@@ -1,8 +1,7 @@
 from flask import request
 
-from app import db
-from app.models import Observation,Site,Sensor,Metric,Unit,Instrument,OffsetType
-import app
+from leapi import db
+from leapi.models import Observation,Site,Sensor,Metric,Unit,Instrument,OffsetType
 
 from sqlalchemy.exc import IntegrityError,DataError
 
@@ -10,7 +9,7 @@ from flask.ext.restful import fields
 from flask.ext.restful import reqparse
 from flask.ext.restful import abort
 
-from app.hal import HalResource, marshal_with
+from leapi.hal import HalResource, marshal_with
 
 def by_id_or_filter(obj, args, atname=None):
     atname = obj.__name__.lower() if atname == None else atname

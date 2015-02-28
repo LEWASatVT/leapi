@@ -7,7 +7,7 @@ from werkzeug.routing import BuildError
 
 from collections import OrderedDict
 
-from app import api
+from leapi import api
 from functools import wraps
 import resources
 

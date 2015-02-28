@@ -1,7 +1,7 @@
-from app.models import Site,Instrument
+from leapi.models import Site,Instrument
 from flask.ext.restful import Resource
 from flask.ext.restful import fields
-from app.hal import HalResource, HalLink, marshal_with
+from leapi.hal import HalResource, HalLink, marshal_with
 
 site_fields = {
         'id': fields.String,

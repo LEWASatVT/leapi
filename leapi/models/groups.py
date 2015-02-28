@@ -1,5 +1,5 @@
-from app import db
-from app import hal
+from leapi import db
+from leapi import hal
 from sqlalchemy import UniqueConstraint
 
 groups = db.Table('group_metrics',

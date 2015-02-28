@@ -1,5 +1,5 @@
-from app.models import Instrument,Site
-from app.hal import HalResource, marshal_with
+from leapi.models import Instrument,Site
+from leapi.hal import HalResource, marshal_with
 from flask.ext.restful import fields
 from flask.ext.restful import marshal_with
 from flask.ext.restful import reqparse

@@ -1,7 +1,7 @@
 from flask import request
 import itertools
 
-from app.models import Observation,Site,Sensor,Metric,Unit,Instrument,CountedMetric
+from leapi.models import Observation,Site,Sensor,Metric,Unit,Instrument,CountedMetric
 #from app.resources import MetricResource,UnitResource
 #from app import resources as res
 
@@ -12,11 +12,11 @@ from flask.ext.restful import reqparse
 from flask.ext.restful import abort
 from flask.ext.restful import marshal
 
-from app.hal import HalResource, marshal_with
-from app import api
+from leapi.hal import HalResource, marshal_with
+from leapi import api
 
 import pytz
-from app.dateparser import DateParser
+from leapi.dateparser import DateParser
 
 TZ = pytz.timezone('US/Eastern')
 

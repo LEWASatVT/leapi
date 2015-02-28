@@ -1,5 +1,5 @@
 #!/bin/env python
-from app import app,db,models
+from leapi import app,db,models
 
 import MySQLdb
 
@@ -8,7 +8,7 @@ def insert_sql(record):
     (TIMESTAMP '{dt}', {humidity}, (SELECT id FROM sensors WHERE name='humidity')),
     (TIMESTAMP '{dt}', {pressure}, (SELECT id FROM sensors WHERE name='pressure'))
     """.format(dt=record[1], temp=record[2], humidity=record[3], pressure=record[4])
-mdb = MySQLdb.connect("localhost", "root", "", "lewas_legacy")
+mdb = MySQLdb.connect("localhost", "root", "root", "lewas_legacy")
 cursor = mdb.cursor()
 
 cursor.execute("SELECT * FROM PTH")

@@ -1,9 +1,9 @@
-from app.models import Metric,Observation,CountedMetric
+from leapi.models import Metric,Observation,CountedMetric
 from flask.ext.restful import fields,abort
-from app.hal import HalResource, marshal_with, HalLink
-from app import db
+from leapi.hal import HalResource, marshal_with, HalLink
+from leapi import db
 from sqlalchemy import func
-from app import api
+from leapi import api
 
 def add_count(obj,count):
     setattr(obj,'observationCount',count)
