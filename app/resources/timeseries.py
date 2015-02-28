@@ -59,7 +59,7 @@ class TimeseriesResource(HalResource):
         #print("my endpoint is {}".format(self.endpoint))
         #print("my url is {}".format(api.url_for(self, site_id='stroubles1')))
         data = []
-        filterexp = [Site.id==site_id,Observation.site_id==Site.id,Observation.instrument_id==Instrument.id]
+        filterexp = [Site.id==site_id,Observation.site_id==Site.id,Observation.instrument_id==Instrument.id, Observation.offset_value == None]
 
         args = self.parser.parse_args()
         if metric_id == None and (args['metric.id'] == None and (args['metric.medium'] == None or args['metric.name'] == None)):
