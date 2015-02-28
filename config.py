@@ -7,7 +7,6 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URI']
     SQLALCHEMY_MIGRATE_REPO = os.path.join(basedir, 'db_repository')
 
-
 class ProductionConfig(Config):
     DEBUG = False
 

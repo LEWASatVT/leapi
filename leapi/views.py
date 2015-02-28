@@ -11,7 +11,6 @@ def output_json(data, code, headers=None):
     resp.headers.extend(headers or {})
     return resp
 
-print("loading views")
 api.add_resource(SiteList, '/')
 api.add_resource(SiteResource, '/sites', '/sites/<string:id>')
 api.add_resource(InstrumentResource, 
