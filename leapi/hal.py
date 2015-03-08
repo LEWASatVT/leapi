@@ -2,7 +2,9 @@ import inspect
 from itertools import chain
 from collections import OrderedDict
 from functools import wraps
+import json
 
+from flask import make_response
 import flask.ext.restplus as restful
 from flask.ext.restful.utils import unpack
 from flask.views import MethodViewType
@@ -87,12 +89,29 @@ def link_args(res, v, default_args={}, target=None):
     largs.update(sub_values)
     return largs
     
+def get_class_of_funct(f, *args, **kwargs):
+    args_map = {}
+    if args or kwargs:
+        args_map = inspect.getcallargs(f, *args, **kwargs)
+        cls = args_map.pop('self',None)
+        if cls is not None:
+            cls_name = cls.__class__.__name__
+        return cls.__class__, args_map
+    else:
+        return None, {}
+    
 class Hal():
     def __init__(self, api, marshal_with=restful.marshal_with, fields=restful.fields):
         self.api = api
         self._marshal_with = marshal_with
         self.fields = fields
         
+        @api.representation('application/json+hal')
+        def output_json(data, code, headers=None):
+            resp = make_response(json.dumps(data), code)
+            resp.headers.extend(headers or {})
+            return resp
+
     def marshal_fields(self, fields, embedded, links):
         if embedded:
             fields['_embedded'] = self.fields.Nested(self.api.model('Embedded', nest_embedded(embedded)))
@@ -120,22 +139,21 @@ class Hal():
         def hal_wrapped(f):
             @wraps(f)
             def wrapper(*args, **kwargs):
-                args_map = {}
-                if args or kwargs:
-                    args_map = inspect.getcallargs(f, *args, **kwargs)
-                    cls = args_map.pop('self',None)
-                    if cls is not None:
-                        cls_name = cls.__class__.__name__
-                        if hasattr(cls, '_nested_links'):
-                            nested_links = cls._nested_links
-                            for k,v in nested_links.items():
-                                v.nested = self.api.model(k, v.nested)
-                            cls.fields['_links'] = restful.fields.Nested(self.api.model('Links',nested_links))
-                print("wrapping " + cls_name)
+                cls, args_map = get_class_of_funct(f, *args, **kwargs)
+
+                if cls is not None:
+                    cls_name = cls.__name__
+                    
+                if hasattr(cls, '_nested_links'):
+                    nested_links = cls._nested_links
+                    for k,v in nested_links.items():
+                        v.nested = self.api.model(k, v.nested)
+                    cls.fields['_links'] = restful.fields.Nested(self.api.model('Links',nested_links))
+
                 link_args = dict([ (k,k) for k in args_map.keys() ])
                 if 'self' not in links:
                     links['self'] = (cls_name, link_args)
-                    print("setting self link to {}".format(links['self']))
+
                 resp = f(*args, **kwargs)
                 if isinstance(resp, tuple):
                     data, code, headers = unpack(resp)
