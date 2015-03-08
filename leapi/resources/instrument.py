@@ -29,13 +29,16 @@ class InstrumentResource(Resource):
     def get(self, site_id, id = None):
         '''list instruments at a particular site'''
         args = self.parser.parse_args()
+        filterexp=[Site.id==site_id]
         if args['name']:
             if not site_id:
                 abort(400, message="must use /sites/<site_id>/instruments to query instruments")
-            q = Instrument.query.join(Site).filter(Site.id==site_id,Instrument.name==args['name'])
-            return q.all()
+            filterexp.append(Instrument.name==args['name'])    
+
+        q = Instrument.query
+        
         if id == None:
-            r = Instrument.query.all()
+            r = q.join(Site).filter(*filterexp).all()
         else:
-            r = Instrument.query.get_or_404(id)
+            r = q.get_or_404(id)
         return r
