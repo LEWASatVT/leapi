@@ -1,24 +1,12 @@
-from flask.ext.restful import Resource
-from flask.ext.restful import marshal_with,marshal
-from flask.ext.restful import fields as restful_fields
-from flask.views import MethodViewType
+import inspect
 from itertools import chain
-from werkzeug.routing import BuildError
-
 from collections import OrderedDict
-
-from leapi import api
 from functools import wraps
-import resources
 
-class marshal_with(marshal_with):
-    ## TODO may need to override restful.marshal to get _embedded in there properly
-    def __init__(self, fields, envelope=None):
-        fields['_links'] = restful_fields.Raw
-        super(marshal_with, self).__init__(fields)
-
-def make_self(uri):
-    return { 'self': { 'href': uri } }
+import flask.ext.restplus as restful
+from flask.ext.restful.utils import unpack
+from flask.views import MethodViewType
+from werkzeug.routing import BuildError
 
 def reorder(od):    
     hal = dict(_links=od['_links'])
@@ -26,129 +14,198 @@ def reorder(od):
         hal['_embedded'] = od['_embedded']
     # Reorder OrderedDict so hal objects are first
     return OrderedDict( ( (k, hal.get(k, od.get(k))) for k in chain(hal, od)) )
-
-## No longer used, may remove at some point if not needed for reference
-# def _halify(data, api, uri):
-#     # TODO when would this list ever have more than a single item?
-#     if isinstance(data, (list, tuple)):
-#         for d in data:
-#             try:
-#                 d['_links'] = make_self(uri)
-#                 d = reorder(d)
-#             except TypeError, e:
-#                 pass #print("TypeError d: {}".format(data))
-
-#     else:
-#         data['_links'] = make_self(uri)
-#         data = reorder(data)
-#     return data
-
-## Referece for adding a decorator to methods
-# class halify(object):
-#     def __init__(self, api):
-#         self.api = api
-
-#     def __call__(self, f):
-#         @wraps(f)
-#         def wrapper(*args, **kwargs):
-#             resource = args[0]
-#             print("halify: ({}, {})".format(resource.endpoint, kwargs))
-#             #self_uri = self.api.url_for(resource)
-#             try:
-#                 self_uri = self.api.url_for(resource, **kwargs)
-#             except BuildError,e:
-#                 self_uri = '/build_error'
-#             resp = f(*args, **kwargs)
-#             if isinstance(resp, tuple):
-#                 data, code, headers = unpack(resp)
-#                 return _halify(data, self.api, self_uri), code, headers
-#             else:
-#                 return _halify(resp, self.api, self_uri)
-#         return wrapper
                 
-def resourceName(field_name):
-    return field_name.capitalize() + 'Resource'
 
-def getResource(field):
-    #print("getting resource for {}".format(field))
-    if isinstance(field, tuple):
-        resource_name = field[1]
+def list_or_nested(v):
+    if isinstance(v, list):
+        return restful.fields.List(restful.fields.Nested(v[0]))
+    elif hasattr(v, '__getitem__'):
+        return restful.fields.Nested(v)
     else:
-        resource_name = field
-    try:
-        return getattr(resources,resource_name)
-    except AttributeError,e:
-        print("no {} found in resources: {}".format(resource_name,[ (k,v) for k,v in resources.__dict__.items() if hasattr(v,'poodlydoo')]))
+        return restful.fields.Raw(v)
+    
+def nest_embedded(embedded, model_wrap=lambda x: x):
+    edict = dict([ (k, list_or_nested(v)) for k,v in embedded.items()])
+    return edict
+
+def upack_helper(v):
+    if isinstance(v, tuple):
+        return v
+    else:
+        return (v,v)
+    
+def link_helper(largs):
+    base_args = [ upack_helper(v) for v in largs.items() ]
+    return base_args
+
+def key_sub(args, sup_args={}):
+    for k,v in sup_args.items():
+        if not k == v and k is not None:
+            val = args.pop(v, None)
+            args[k] = val
+    return args
+
+def get_property(resource, name, default=None):
+    if hasattr(resource, name):
+        return getattr(resource, name, default)
+    elif hasattr(resource, 'get'):
+        return resource.get(name, default)
+    elif hasattr(resource, '__getitem__'):
+        try:
+            return resource.__getitem__(name)
+        except KeyError:
+            return default
+        #except TypeError as e:
+        #    print("TypeError: " + str(e) + " ({})".format(name))
+    else:
+        print("Don't know what to do with {}".format(type(resource)))
         return None
 
-def resourcePair(field):
-    field_name = field[0] if isinstance(field, tuple) else field
-    resource_name = field[1] if isinstance(field, tuple) else resourceName(field)
-    return (field_name, Embedded(resource_name))
-    #return (field_name, restful_fields.List(Embedded(resource_name)))
-    #obj = getResource(resource_name)
-    #print("obj for {} ({}) is {}".format(field,resource_name,obj))
-    #if obj:
-    #    return (field_name, Embedded(obj))
-    #return (field_name, restful_fields.Raw)
+def set_property(resource, name, value):
+    if hasattr(resource, '__setitem__'):
+        resource.__setitem__(name, value)
+    else:
+        try:
+            setattr(resource, name, value)
+        except AttributeError as e:
+            print("AttributeError: " + str(e))
+    return resource
 
-class Embedded(restful_fields.Raw):
-    def __init__(self, cls_name):
-        self.cls_name = cls_name
-
-    def output(self, key, obj):
-        self.cls = getResource(self.cls_name)
-        #print("embedding {}.{}".format(obj,key))
-        if obj is None:
-            return None
-        if hasattr(self.cls, 'fields'):
-            f = self.cls.fields
-            f.pop('_embedded', None)
-            if hasattr(obj, '__getitem__'):
-                try:
-                    #print ("embedding {} with fields {}".format(key,obj[key], f))
-                    return marshal(obj[key], f)
-                except KeyError,e:
-                    print("KeyError on {} ({})".format(obj,str(e)))
-            #print ("embedding {}.{} with fields {}".format(obj,key, f))
-
-            embedded = getattr(obj,key)
-            #print("type {}".format(type(embedded)))
-            if hasattr(embedded, 'all'):
-                return [ marshal(e,f) for e in embedded.all() ]
-            return marshal(embedded, f)
+def link_args(res, v, default_args={}, target=None):
+    if target is not None:
+        print("link args for '{}'".format(target))
+    sub_args = {}
+    args = default_args.copy()
+    if hasattr(v, '__iter__'):
+        sub_args = v[1]
+    #print("args pre sub: {}".format(args))
+    #if sub_args:
+    #    print("subing args: {}".format(sub_args))
+    args = key_sub(args, sub_args)
+    largs = dict([ (k, get_property(res, v, 'None')) for k,v in link_helper(args) if v is not None ])
+    sub_values = dict([ (k, get_property(res, v, 'None')) for k,v in link_helper(sub_args) if v is not None ])
+    largs.update(sub_values)
+    return largs
+    
+class Hal():
+    def __init__(self, api, marshal_with=restful.marshal_with, fields=restful.fields):
+        self.api = api
+        self._marshal_with = marshal_with
+        self.fields = fields
         
-    def __repr__(self):
-        return "Embedded({})".format(self.cls_name)
-    #def output(self, key, obj):
-    #    print("{}: {}".format(key,obj[key]))
-    #    if hasattr(self.cls, 'fields'):
-    #        return marshal(obj[key], self.cls.fields)
-    #    return marshal(obj, {})
+    def marshal_fields(self, fields, embedded, links):
+        if embedded:
+            fields['_embedded'] = self.fields.Nested(self.api.model('Embedded', nest_embedded(embedded)))
 
-class HalLink(restful_fields.Raw):
-    def __init__(self,name, args):
-        self.rname = name
-        self.args = args
-        self.attribute = 'get'
+        if '_links' in fields:
+            for k,v in links.items():
+                fields['_links'][k] = self.api.model(k, {'href': RobustUrl(v[0])})
+        return fields
+    
+    def marshal_with(self, fields, **kwargs):
+        '''
+        A decorator that modifies fields and data to add HAL specific fields
 
-    def output(self, key, obj):
-        if obj is None:
-            return ""
-        res = getResource(self.rname)
-        #print("getting HalLink for {} with ({},{}) of type {}".format(res,key,obj,type(obj)))
-        if hasattr(obj, '__dict__'):
-            obj = obj.__dict__
-        # turn self.args into a dict of k,v pairs: scalar a tursn to
-        # (a,a) while tuple (a,b) remains (a,b)
-        args = dict([ ((lambda x: x if isinstance(x, tuple) else (x,x))(a)) for a in self.args ])
-        obj = dict([ (args[k],v) for k,v in obj.items() if k in args ])
-        if res:
+        :param embedded: provide a list of resources that will be embedded in this response
+        :param links: provide a list of links that will be appended to this response
+        '''
+
+        #def __init__(self, hal, fields, **kwargs):
+        embedded = kwargs.pop('embedded', {})
+        links = kwargs.pop('links', {})
+            
+        fields = self.marshal_fields(fields, embedded, links)
+        cls_name = "Unknown Class"
+                
+        def hal_wrapped(f):
+            @wraps(f)
+            def wrapper(*args, **kwargs):
+                args_map = {}
+                if args or kwargs:
+                    args_map = inspect.getcallargs(f, *args, **kwargs)
+                    cls = args_map.pop('self',None)
+                    if cls is not None:
+                        cls_name = cls.__class__.__name__
+                        if hasattr(cls, '_nested_links'):
+                            nested_links = cls._nested_links
+                            for k,v in nested_links.items():
+                                v.nested = self.api.model(k, v.nested)
+                            cls.fields['_links'] = restful.fields.Nested(self.api.model('Links',nested_links))
+                print("wrapping " + cls_name)
+                link_args = dict([ (k,k) for k in args_map.keys() ])
+                if 'self' not in links:
+                    links['self'] = (cls_name, link_args)
+                    print("setting self link to {}".format(links['self']))
+                resp = f(*args, **kwargs)
+                if isinstance(resp, tuple):
+                    data, code, headers = unpack(resp)
+                    if embedded:
+                        apply_to_possible_list(data, set_embedded(embedded))
+                    if links:
+                        apply_to_possible_list(data, set_links(links, link_args))
+                    return (data, code, headers)
+                else:
+                    if embedded:
+                        apply_to_possible_list(resp, set_embedded(embedded))
+                    if links:
+                        apply_to_possible_list(resp, set_links(links, link_args))
+                    return resp
+            return wrapper
+        
+        def wrapper(f):
+            return self._marshal_with(fields, **kwargs)(hal_wrapped(f))
+        return wrapper
+        #return hal_decorator
+                             
+# Utils for merge_hal
+def resource_or_all(data, emb):
+    attr = get_property(data, emb)
+    if hasattr(attr, 'all'):
+        return attr.all()
+    else:
+        return attr
+
+def apply_to_possible_list(data, f):
+    if isinstance(data, list):
+        for d in data:
+            f(d)
+    else:
+        f(data)
+    return data
+
+def make_embedded(data, embedded):
+    return dict([ (emb, resource_or_all(data, emb)) for emb,res in embedded.items() ])
+
+def set_embedded(embedded):
+    return lambda r: set_property(r, '_embedded', make_embedded(r, embedded))
+
+def make_links(res, links, default_args={}):
+    link_data = {}
+    if hasattr(links,'items'):
+        link_data = dict([ (t, link_args(res, v, default_args)) for t,v in links.items() ])
+    return link_data
+
+def set_links(links, sup_args={}):
+    return lambda r: set_property(r, '_links',  make_links(r, links, sup_args))
+
+class RobustUrl(restful.fields.Url):
+    def __init__(self, *args, **kwargs):
+        super(RobustUrl,self).__init__(*args, **kwargs)
+
+    def output(self,key,obj):
+        resp = {'message': "key: {}, obj: {}".format(key,obj)}
+        if obj is not None:
             try:
-                return { 'href': api.url_for(res, **obj) }
-            except BuildError,e:
-                return { 'builderror': str(e) }
-        return '/'
+                resp = super(RobustUrl,self).output(key,obj)
+            except BuildError as e:
+                print("got BuildError: {}".format(str(e)))
+                resp = 'BuildError: ' + str(e)
+            except ValueError as e:
+                print("got ValueError: {}".format(str(e)))
+                resp = 'ValueError: ' + str(e)
+            return resp
+        else:
+            return resp
 
 class HalResourceType(MethodViewType):
     def __new__(cls, name, bases, attrs):
@@ -158,37 +215,23 @@ class HalResourceType(MethodViewType):
         newattrs = {}
         #attrs['get'] = halify(api)(attrs['get'])
         #for attrname, attrvalue in attr.iteritems():
-        attrs['_link_args'] = ['id'] + ([] if 'link_args' not in attrs else attrs['link_args'])
+        #attrs['_link_args'] = ['id'] + ([] if 'link_args' not in attrs else attrs['link_args'])
         if 'fields' in attrs:
-            attrs['fields']['_links'] = { 'self': HalLink(name, attrs['_link_args']) }
-
-        # TODO: this should just populate something with functions
-        # that are called when needed, I think at this point if some
-        # resources haven't been created yet no Embedded(obj) is
-        # created for them
-        if '_embedded' in attrs:
-            if hasattr(attrs['_embedded'], 'items'):
-                attrs['fields']['_embedded'] = dict([ (key, Embedded(obj)) for key,obj in attrs['_embedded'].items() ])
-                #print("building embedded dict from dict: {}".format(attrs['fields']['_embedded']))
-            elif hasattr(attrs['_embedded'], '__iter__'):
-                #print("{}: building embedded dict from itterable".format(name))                
-                edict = dict([ resourcePair(f) for f in attrs['_embedded'] ])
-                #print("{}: edict: {}".format(name, edict))
-                edict = dict( [ (k,v) for k,v in edict.items() if isinstance(v, Embedded) ] )
-                #print("{}: edict: {}".format(name, edict))
-                attrs['fields']['_embedded'] = edict
-                #attrs['fields']['_embedded'] = restful_fields.List(Embedded('InstrumentResource'))
-
-        if '_links' in attrs:
-            for t,l in attrs['_links'].items():
-                attrs['fields']['_links'][t] = l
+            links = {'self': restful.fields.Nested({'href': RobustUrl(name.lower()) }) }
+            if '_links' in attrs:
+                for t,v in attrs['_links'].items():
+                    links[t] = restful.fields.Nested({'href': RobustUrl(v[0].lower())})
+            attrs['_nested_links'] = links
+            #attrs['fields']['_links'] = restful.fields.Nested(links)
+            #if '_embedded' in attrs:
+            #    attrs['fields']['_embedded'] = restful.fields.Nested(nest_embedded(attrs['_embedded']))
 
         return super(HalResourceType, cls).__new__(cls, name, bases, attrs)
 
     def __init__(self, name, bases, attrs):
         super(HalResourceType, self).__init__(name, bases, attrs)
 
-class HalResource(Resource):
+class Resource(restful.Resource):
     __metaclass__ = HalResourceType
     def get(self):
         pass

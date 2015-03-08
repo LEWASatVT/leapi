@@ -23,12 +23,12 @@ class Observation(db.Model):
     site_id = db.Column(db.String, db.ForeignKey('sites.id'), nullable=False)
     instrument_id = db.Column(db.Integer, db.ForeignKey('instruments.id'), nullable=False)
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id') ) #TODO once established, make nullable=False
-    metric_id = db.Column(db.Integer, db.ForeignKey('variables.id'), nullable=False)
+    metric_id = db.Column(db.Integer, db.ForeignKey('counted_metrics.id'), nullable=False)
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
     offset_value = db.Column(db.Float)
     offset_type_id = db.Column(db.Integer, db.ForeignKey('offsettypes.id') )
 
-    metric = db.relationship('Metric')
+    metric = db.relationship('CountedMetric')
     units = db.relationship('Unit')
     instrument = db.relationship('Instrument')
     sensor = db.relationship('Sensor')

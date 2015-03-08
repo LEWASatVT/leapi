@@ -1,15 +1,13 @@
 from flask import request
 
-from leapi import db
-from leapi.models import Observation,Site,Sensor,Metric,Unit,Instrument,OffsetType
-
 from sqlalchemy.exc import IntegrityError,DataError
 
-from flask.ext.restful import fields
-from flask.ext.restful import reqparse
+from flask.ext.restplus import fields, Resource
 from flask.ext.restful import abort
 
-from leapi.hal import HalResource, marshal_with
+from leapi import db, api, hal
+from leapi.models import Observation,Site,Sensor,Metric,Unit,Instrument,OffsetType
+from leapi.resources import metric, unit, instrument, sensor
 
 def by_id_or_filter(obj, args, atname=None):
     atname = obj.__name__.lower() if atname == None else atname
@@ -23,40 +21,39 @@ def by_id_or_filter(obj, args, atname=None):
         res = obj.query.filter_by(**dict(args[atname].items())).first()
     return res
 
-class ObservationResource(HalResource):
-    fields = {
-        'id': fields.Integer,
-        'datetime': fields.DateTime,
-        'value': fields.Float,
-        'site_id': fields.String
-    }
-    
-    _embedded = [ ('metric','CountedMetricResource'),
-                  'instrument',
-                  'sensor',
-                  ('units', 'UnitResource'),
-              ]
-    #_embedded = { 'units': res.UnitResource,
-    #              'metric': res.MetricResource,
-    #              'instrument': res.InstrumentResource
-    #              }
+parser = api.parser()
+parser.add_argument('value', type=float, required=True, help="value observed", location='json')
+parser.add_argument('datetime', type=str, required=True, help="date and time observation was made", location='json')
+parser.add_argument('units', type=dict, required=True, help="units observation value is in", location='json')
+parser.add_argument('metric', type=dict, required=True, help="metric the observation observed", location='json')
+parser.add_argument('instrument', type=dict, help="instrument that made the observation")
+parser.add_argument('site', type=dict, help="missing site_id", location='json')
+parser.add_argument('sensor', type=dict) #TODO once established, make required 
+parser.add_argument('offset', type=dict, help="physical or temperal offset of observed value")
+parser.add_argument('stderr', type=float, help="standard deviation of observed value")
 
-    def __init__(self):
-        self.parser = reqparse.RequestParser()
-        self.parser.add_argument('value', type=float, required=True, help="value cannot be blank")
-        self.parser.add_argument('datetime', type=str, required=True, help="missing datetime")
-        self.parser.add_argument('units', type=dict, required=True, help="missing units")
-        self.parser.add_argument('metric', type=dict, required=True, help="missing metric")
-        self.parser.add_argument('instrument', type=dict, help="missing instrument")
-        self.parser.add_argument('site', type=dict, help="missing site_id")
-        self.parser.add_argument('sensor', type=dict) #TODO once established, make required 
-        self.parser.add_argument('offset', type=dict)
-        self.parser.add_argument('stderr', type=float)
-        super(ObservationResource,self).__init__()
+#@api.doc(params={'site_id': 'A site ID', 'instrument_id': 'An instrument ID'})
+class ObservationResource(Resource):
+    '''Show a single observation made or post a new one. Primary resource used by sensor layer'''
+    fields = api.model('Observation',
+                       {
+                           'id': fields.Integer(),
+                           'datetime': fields.DateTime(required=True, description='A formated datetime string'),
+                           'value': fields.Float(required=True),
+                           'offset': fields.Nested(api.model('offset', {'value': fields.Float(), 'type': fields.String()})), 
+                           'site_id': fields.String(required=True)
+                       })
 
-    @marshal_with(fields)
+    _embedded = { 'metric': metric.MetricResource.fields,
+                  'units': unit.UnitResource.fields,
+                  'instrument': instrument.InstrumentResource.fields,
+                  'sensor': sensor.SensorResource.fields
+              }
+
+    @hal.marshal_with(fields, embedded=_embedded)
+    @api.doc(description="Not particularly useful for timeseries analysis, that's what the timeseries resource is for")
     def get(self, site_id, instrument_name, id = None):
-        print("getting measurement for {} at {}".format(instrument_name,site_id))
+        '''get a particular observation or list of observations. Not terribly useful, you probably want timeseries'''
         filterexp = [Site.id==site_id,Instrument.name==instrument_name,Observation.site_id==site_id,Observation.instrument_id==Instrument.id]
         if 'metric' in ( k.split('.')[0] for k in request.args.keys() ):
             mkeys = [ k.split('.')[1] for k in request.args.keys() if k.split('.')[0] == 'metric' ]
@@ -68,13 +65,15 @@ class ObservationResource(HalResource):
             r = Observation.query.get_or_404(id)
         return r
 
-    @marshal_with(fields)
+    @api.doc(responses={201: 'Observation created'}, parser=parser)
+    @api.marshal_with(fields, code=201)
     def post(self, site_id=None, instrument_id=None, instrument_name=None):
+        '''Post a new observation'''
         if not request.json:
             abort(400, message="request must be JSON")
         errors = []
 
-        args = self.parser.parse_args()
+        args = parser.parse_args()
         r = Observation(datetime=args['datetime'], value=args['value'])
         if site_id:
             site = Site.query.get(site_id)

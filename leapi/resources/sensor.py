@@ -1,20 +1,20 @@
+from leapi import api, hal
 from leapi.models import Sensor,Instrument,Site,Metric,Unit
-from flask.ext.restful import fields
+from flask.ext.restful import fields, Resource
 from json import dumps
 
-from leapi.hal import HalResource, HalLink, marshal_with
-
-class SensorResource(HalResource):
-    fields = {
+@api.doc(False)
+class SensorResource(Resource):
+    fields = api.model('Sensor', {
         'id': fields.Integer,
         'name': fields.String,
-    }
+    })
 
     link_args = ['site_id','instrument_name']
-    _links = { 'instrument': HalLink('InstrumentResource', ['site_id', ('instrument_id','id')]) }
+    #_links = { 'instrument': HalLink('InstrumentResource', ['site_id', ('instrument_id','id')]) }
     _embedded = [ ('metric','CountedMetricResource') ]
 
-    @marshal_with(fields)
+    @hal.marshal_with(fields)
     def get(self, site_id, instrument_name, id = None):
         q = Sensor.query.join(Sensor.instrument,Site).filter(Site.id==site_id,Instrument.name==instrument_name)
         if id == None:

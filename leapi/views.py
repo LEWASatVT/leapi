@@ -27,6 +27,8 @@ api.add_resource(UnitResource, '/units', '/units/<int:id>')
 api.add_resource(ObservationResource, 
                  '/sites/<string:site_id>/instruments/<int:instrument_id>/observations',
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/observations',
+                 '/sites/<string:site_id>/instruments/<int:instrument_id>/observations/<int:id>',
+                 '/sites/<string:site_id>/instruments/<string:instrument_name>/observations/<int:id>',
 )
 
 api.add_resource(TimeseriesResource, 
@@ -40,3 +42,5 @@ def not_found(error):
 @app.errorhandler(400)
 def not_found(error):
     return make_response(json.dumps({'error': 'Bad request'}), 400)
+
+    

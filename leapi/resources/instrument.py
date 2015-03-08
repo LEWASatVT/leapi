@@ -1,29 +1,33 @@
+from leapi import api, hal
 from leapi.models import Instrument,Site
-from leapi.hal import HalResource, marshal_with
-from flask.ext.restful import fields
-from flask.ext.restful import marshal_with
-from flask.ext.restful import reqparse
+from leapi.hal import Resource
+import flask.ext.restplus as restful
 
-class InstrumentResource(HalResource):
-    fields = {
-        'id': fields.Integer,
-        'name': fields.String,
-        'manufacturer': fields.String,
-        'model': fields.String,
-        'site_id': fields.String
-    }
+fields = {
+    'id': restful.fields.Integer(),
+    'name': restful.fields.String(),
+    'manufacturer': restful.fields.String(),
+    'model': restful.fields.String(),
+    'site_id': restful.fields.String()
+}
+
+@api.doc(False)
+class InstrumentResource(Resource):
+    fields = api.model('Instrument', fields)
 
     link_args = ['site_id']
-    _embedded = ['site', ('sensors','SensorResource')]
+
+    #_embedded = ['site', ('sensors','SensorResource')]
 
     def __init__(self):
-        self.parser = reqparse.RequestParser()
+        self.parser = api.parser()
         self.parser.add_argument('name', type=str)
         super(InstrumentResource,self).__init__()
 
 
-    @marshal_with(fields)
+    @hal.marshal_with(fields)
     def get(self, site_id, id = None):
+        '''list instruments at a particular site'''
         args = self.parser.parse_args()
         if args['name']:
             if not site_id:

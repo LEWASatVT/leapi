@@ -1,19 +1,18 @@
-from leapi import db
+from leapi import db, api, hal
 from leapi.models import Unit
 
-from flask.ext.restful import fields
+from flask.ext.restplus import fields, Resource
 
-from leapi.hal import HalResource, marshal_with
+@api.doc(False)
+class UnitResource(Resource):
+    fields = api.model('Unit', {
+        'id' : fields.Integer(),
+        'abbv': fields.String(),
+        'name': fields.String(),
+        'type': fields.String()
+    })
 
-class UnitResource(HalResource):
-    fields = {
-        'id' : fields.Integer,
-        'abbv': fields.String,
-        'name': fields.String,
-        'type': fields.String
-    }
-
-    @marshal_with(fields)
+    @hal.marshal_with(fields)
     def get(self, id = None):
         if id == None:
             r = Unit.query.all()

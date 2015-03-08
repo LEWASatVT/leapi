@@ -1,7 +1,7 @@
 from leapi.models import Metric,Observation,CountedMetric
-from flask.ext.restful import fields,abort
-from leapi.hal import HalResource, marshal_with, HalLink
-from leapi import db
+from flask.ext.restplus import fields,abort
+from leapi.hal import Resource
+from leapi import db, api, hal
 from sqlalchemy import func
 from leapi import api
 
@@ -13,17 +13,18 @@ def add_site(obj,site):
     setattr(obj,'site_id',site)
     return obj
 
-class MetricResource(HalResource):
-    fields = {
-        'id': fields.Integer,
-        'name': fields.String,
-        'medium': fields.String,
-        'observationCount': fields.Integer
-    }
+metric_fields = api.model('Metric', {
+    'id': fields.Integer(),
+    'name': fields.String(description="name of the metric being observed, e.g. velocity, depth, voltage"),
+    'medium': fields.String(description="the medium being observed, e.g. air, water, battery")
+})
 
-    _links = { 'timeseries': HalLink('TimeseriesResource', ['site_id', ('id', 'metric.id')]) }
+class MetricResource(Resource):
+    fields = metric_fields
+    
+    _links = { 'timeseries': 'TimeseriesResource' }
 
-    @marshal_with(fields)
+    @hal.marshal_with(fields)
     def get(self, site_id=None, id=None):
         filters=[]
         if site_id:
@@ -53,7 +54,7 @@ class MetricResource(HalResource):
         return r
 
 
-class CountedMetricResource(HalResource):
+class CountedMetricResource(Resource):
     # Note, this depends on a view in teh database, SQLAlchemy
     # currently doesn't support the creation of a view, run this:
 
@@ -61,18 +62,15 @@ class CountedMetricResource(HalResource):
     # count(o.id),o.site_id,m.* FROM observations AS o RIGHT OUTER
     # JOIN variables AS m ON o.metric_id = m.id GROUP BY
     # m.id,o.site_id;
-    fields = {
-        'id': fields.Integer,
-        'name': fields.String,
-        'medium': fields.String,
-        'observationCount': fields.Integer(attribute='count')
-    }
+    fields = api.extend('CountedMetric', metric_fields, {
+        'observationCount': fields.Integer(attribute='count', description="Number of observations made on this metric")
+    })
 
     link_args = ['site_id', ('metric_id', 'id')]
 
-    _links = { 'timeseries': HalLink('TimeseriesResource', ['site_id', ('id', 'metric_id')]) }
+    _links = { 'timeseries': ('TimeseriesResource', {'metric_id': 'id'}) }
 
-    @marshal_with(fields)
+    @hal.marshal_with(fields, links=_links)
     def get(self, site_id=None, id=None):
         filters=[]
         if site_id:
