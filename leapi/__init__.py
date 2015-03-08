@@ -21,6 +21,21 @@ hal = Hal(api, marshal_with=api.marshal_with)
 #ns = api.namespace('leapi', description='TODO operations')
 
 import leapi.views, leapi.models, leapi.resources
+import leapi.archive
+
+if not app.debug:
+    import logging
+    from logging import handlers
+    file_handler = handlers.RotatingFileHandler('/var/log/flask/leapi.log')
+    file_handler.setLevel(logging.WARNING)
+    app.logger.addHandler(file_handler)
+
+    from logging import Formatter
+    file_handler.setFormatter(Formatter(
+        '%(asctime)s %(levelname)s: %(message)s '
+        '[in %(pathname)s:%(lineno)d]'
+    ))
+
 
 @app.route('/leapi-doc/', endpoint='doc')
 def swagger_ui():
