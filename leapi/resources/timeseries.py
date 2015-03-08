@@ -87,9 +87,9 @@ class TimeseriesResource(Resource):
         #this up. Remember, argparse can have differnet
         #internal/external names too, which could be handy
         q = Observation.query.join(Observation.metric,Site,Instrument).\
-            filter(*filterexp)#.\
-            #order_by(Observation.instrument_id,Observation.datetime.desc()).\
-            #group_by(Observation.instrument_id,Observation.id)
+            filter(*filterexp).\
+            order_by(Observation.instrument_id,Observation.datetime.desc()).\
+            group_by(Observation.instrument_id,Observation.id)
         nodata = False
         if args['limit']:
             q = q.limit(args['limit'])
