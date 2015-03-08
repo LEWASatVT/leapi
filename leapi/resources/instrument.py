@@ -11,7 +11,6 @@ fields = {
     'site_id': restful.fields.String()
 }
 
-@api.doc(False)
 class InstrumentResource(Resource):
     fields = api.model('Instrument', fields)
 
