@@ -37,7 +37,7 @@ parser.add_argument('site', type=dict, help="missing site_id", location='json')
 parser.add_argument('sensor', type=dict) #TODO once established, make required 
 parser.add_argument('offset', type=dict, help="physical or temporal offset of observed value", location='json')
 parser.add_argument('stderr', type=float, help="standard deviation of observed value", location='json')
-parser.add_argument('magicsecret', type=float)
+parser.add_argument('magicsecret', type=str)
 
 #parser = api.parser()
 #parser.add_argument('body', type=dict, required=True, help="Body of request", location="json")
