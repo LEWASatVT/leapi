@@ -1,16 +1,22 @@
 from flask import request
 
 from sqlalchemy.exc import IntegrityError,DataError
+from sqlalchemy.orm.exc import FlushError
 
 from flask.ext.restplus import fields, Resource
 from flask.ext.restful import abort
 
 from leapi import db, api, hal
-from leapi.models import Observation,Site,Sensor,Metric,Unit,Instrument,OffsetType
+from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType
 from leapi.resources import metric, unit, instrument, sensor
 
 def by_id_or_filter(obj, args, atname=None):
+    '''find object by id if supplied, and if not construct filter from args'''
     atname = obj.__name__.lower() if atname == None else atname
+
+    if atname == 'countedmetric':
+        print("finding countedmetric by {}".format(args[atname]))    
+
     res = None
     if atname not in args or not args[atname]:
         return None
@@ -29,31 +35,56 @@ parser.add_argument('metric', type=dict, required=True, help="metric the observa
 parser.add_argument('instrument', type=dict, help="instrument that made the observation")
 parser.add_argument('site', type=dict, help="missing site_id", location='json')
 parser.add_argument('sensor', type=dict) #TODO once established, make required 
-parser.add_argument('offset', type=dict, help="physical or temperal offset of observed value")
-parser.add_argument('stderr', type=float, help="standard deviation of observed value")
+parser.add_argument('offset', type=dict, help="physical or temporal offset of observed value", location='json')
+parser.add_argument('stderr', type=float, help="standard deviation of observed value", location='json')
 
-#@api.doc(params={'site_id': 'A site ID', 'instrument_id': 'An instrument ID'})
+#parser = api.parser()
+#parser.add_argument('body', type=dict, required=True, help="Body of request", location="json")
+
+get_fields = api.model('Observation',
+                   {
+                       'id': fields.Integer(),
+                       'datetime': fields.DateTime(required=True, description='A formated datetime string'),
+                       'value': fields.Float(required=True),
+                       'offset': fields.Nested(api.model('offset', {'value': fields.Float(), 'type': fields.String(enum=['A','B'])})), 
+                       'site_id': fields.String(required=True)
+                   })
+
+post_fields = api.model('ObservationPost',
+                        {
+                            'metric': fields.Nested(metric.MetricResource.fields),
+                            'units': fields.Nested(unit.UnitResource.fields),
+                            'instrument': fields.Nested(instrument.InstrumentResource.fields),
+                            'datetime': fields.DateTime(required=True, description='A formated datetime string'),
+                            'value': fields.Float(required=True),
+                            'stderr': fields.Float(description='Standard error associated with value'),
+                            'offset': fields.Nested(api.model('offset', {'value': fields.Float(), 'type': fields.String(enum=['A','B'])})), 
+                        })
+
+# TODO: When we get materialized views working on server we can use CountedMetricResource
+_embedded = { 'metric': metric.MetricResource.fields,
+              'units': unit.UnitResource.fields,
+              'instrument': instrument.InstrumentResource.fields,
+              'sensor': sensor.SensorResource.fields
+}
+
+    #@api.doc(params={'site_id': 'A site ID', 'instrument_id': 'An instrument ID'})
 class ObservationResource(Resource):
     '''Show a single observation made or post a new one. Primary resource used by sensor layer'''
-    fields = api.model('Observation',
-                       {
-                           'id': fields.Integer(),
-                           'datetime': fields.DateTime(required=True, description='A formated datetime string'),
-                           'value': fields.Float(required=True),
-                           'offset': fields.Nested(api.model('offset', {'value': fields.Float(), 'type': fields.String()})), 
-                           'site_id': fields.String(required=True)
-                       })
 
-    _embedded = { 'metric': metric.MetricResource.fields,
-                  'units': unit.UnitResource.fields,
-                  'instrument': instrument.InstrumentResource.fields,
-                  'sensor': sensor.SensorResource.fields
-              }
-
+    fields=get_fields
+    
     @hal.marshal_with(fields, embedded=_embedded)
     @api.doc(description="Not particularly useful for timeseries analysis, that's what the timeseries resource is for")
-    def get(self, site_id, instrument_name, id = None):
+    def get(self, site_id, instrument_name=None, instrument_id=None, id = None):
         '''get a particular observation or list of observations. Not terribly useful, you probably want timeseries'''
+
+        #don't really need to check for an instrument specifier,
+        #observation ids are unique and the routing rules only allow
+        #URIs with instrument identifiers.
+
+        #if not (instrument_name or instrument_id):
+        #    api.abort(400)
         filterexp = [Site.id==site_id,Instrument.name==instrument_name,Observation.site_id==site_id,Observation.instrument_id==Instrument.id]
         if 'metric' in ( k.split('.')[0] for k in request.args.keys() ):
             mkeys = [ k.split('.')[1] for k in request.args.keys() if k.split('.')[0] == 'metric' ]
@@ -65,8 +96,12 @@ class ObservationResource(Resource):
             r = Observation.query.get_or_404(id)
         return r
 
-    @api.doc(responses={201: 'Observation created'}, parser=parser)
+class ObservationList(Resource):
+    fields=get_fields
+    
+    @api.doc(responses={201: 'Observation created'}, description="Only enough fields in the embedded resources units,metric and instrument need be provided to identify an existing record")
     @api.marshal_with(fields, code=201)
+    @api.expect(post_fields)
     def post(self, site_id=None, instrument_id=None, instrument_name=None):
         '''Post a new observation'''
         if not request.json:
@@ -89,8 +124,9 @@ class ObservationResource(Resource):
             instrument = Instrument.query.get(instrument_id)
         else:
             instrument = by_id_or_filter(Instrument, args)
-
-        metric = by_id_or_filter(Metric, args)
+            
+        # TODO: When materialize views are implemented we can use CountedMetric
+        metric = by_id_or_filter(Metric, args, 'metric')
         unit = Unit.query.filter_by(abbv=args['units']['abbv']).first()
         sensor = by_id_or_filter(Sensor, args)
         
@@ -147,4 +183,6 @@ class ObservationResource(Resource):
             abort(400, message=dict(data_error=str(e),r=r))
         except IntegrityError, e:
             abort(409, message=dict(integrity_error=e.message))
+        except FlushError, e:
+            abort(500, message=dict(flush_error=e.message))
         return r, 201
