@@ -19,12 +19,16 @@ metric_fields = api.model('Metric', {
     'medium': fields.String(description="the medium being observed, e.g. air, water, battery")
 })
 
+counted_metric_fields = api.extend('CountedMetric', metric_fields, {
+        'observationCount': fields.Integer(attribute='count', description="Number of observations made on this metric")
+})
+
 class MetricResource(Resource):
     fields = metric_fields
     
     _links = { 'timeseries': 'TimeseriesResource' }
 
-    @hal.marshal_with(fields)
+    @hal.marshal_with(fields, as_list=True)
     def get(self, site_id=None, id=None):
         filters=[]
         if site_id:
@@ -55,6 +59,28 @@ class MetricResource(Resource):
 
 
 class CountedMetricResource(Resource):
+    fields = counted_metric_fields
+    
+    _links = { 'timeseries': ('TimeseriesResource', {'metric_id': 'id'}) }
+
+    @hal.marshal_with(fields, links=_links)
+    def get(self, id, site_id=None):
+        '''fetch a single metric'''
+        filters=[]
+        if site_id:
+            filters.append(CountedMetric.site_id==site_id)
+        
+        q = CountedMetric.query
+
+        if len(filters):
+            q = q.filter(*filters)
+        if not q.first():
+            abort(404)
+        r = q.first()
+        setattr(r, 'site_id',site_id)
+        return r
+
+class CountedMetricList(Resource):
     # Note, this depends on a view in teh database, SQLAlchemy
     # currently doesn't support the creation of a view, run this:
 
@@ -62,33 +88,25 @@ class CountedMetricResource(Resource):
     # count(o.id),o.site_id,m.* FROM observations AS o RIGHT OUTER
     # JOIN variables AS m ON o.metric_id = m.id GROUP BY
     # m.id,o.site_id;
-    fields = api.extend('CountedMetric', metric_fields, {
-        'observationCount': fields.Integer(attribute='count', description="Number of observations made on this metric")
-    })
-
+    fields = counted_metric_fields
+    
     link_args = ['site_id', ('metric_id', 'id')]
 
     _links = { 'timeseries': ('TimeseriesResource', {'metric_id': 'id'}) }
 
-    @hal.marshal_with(fields, links=_links)
-    def get(self, site_id=None, id=None):
+    @hal.marshal_with(fields, links=_links, as_list=True)
+    @api.doc(description="Use this to populate lists of available metrics")
+    def get(self, site_id=None):
+        '''fetch a list of metrics at a given site'''
         filters=[]
         if site_id:
             filters.append(CountedMetric.site_id==site_id)
-        if id:
-            filters.append(CountedMetric.id==id)
         
         q = CountedMetric.query
         if len(filters):
+            print("applyting filters {}".format(filters))
             q = q.filter(*filters)
 
-        if id == None:
-            # count how many observations each metric has associated with it
-            r = q.all()
-            r = [ m for m in r ]
-        else:
-            if not q.first():
-                abort(404)
-            r = q.first()
-            setattr(r, 'site_id',site_id)
+        r = q.all()
+        #r = [ m for m in r ]
         return r
