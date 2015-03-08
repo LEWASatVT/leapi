@@ -1,37 +1,46 @@
 from leapi.models import Site,Instrument
-from flask.ext.restful import Resource
-from flask.ext.restful import fields
-from leapi.hal import HalResource, HalLink, marshal_with
+from leapi.resources import instrument
+from leapi import api, hal
+import flask.ext.restplus as restful
+from leapi.hal import Resource
+
+#TODO: do this stuff in HalResource
 
 site_fields = {
-        'id': fields.String,
-        'name': fields.String,
-    }
+        'id': restful.fields.String(description="ID of site"),
+        'name': restful.fields.String(description="A descriptive name of the site"),
+    #'_links': {'self': {'href': restful.fields.Url('siteresource')}}
+    #'_embedded': restful.fields.Nested(embedded, description="embedded resources")
+}
 
-class SiteResource(HalResource):
-    fields = site_fields
 
-    _embedded = ['instruments']
+class SiteResource(Resource):
+    fields = api.model('Site', site_fields)
+    
+    _embedded = {'instruments': [instrument.InstrumentResource.fields] }
 
-    @marshal_with(fields)
-    def get(self, id = None):
-        if id == None:
-            site = Site.query.all()
-        else:
-            site = Site.query.get_or_404(id)
-            print("site instruments: {}".format(type(site.instruments)))
-        return site
-
-class SiteList(HalResource):
-    fields = site_fields
-
-    _links = { 'metrics': HalLink('CountedMetricResource', [('id','site_id')]),
-               'instruments': HalLink('InstrumentResource', [('id', 'site_id')])
+    _links = { 'metrics': ('CountedMetricResource',  {'site_id': 'id'}),
+               'instruments': ('InstrumentResource', {'site_id': 'id'})
            }
 
-    _embedded = [('instruments','InstrumentResource')]
+    link_args = {'site_id': 'id'}
     
-    @marshal_with(SiteResource.fields, envelope='sites')
+    @hal.marshal_with(fields, embedded=_embedded, links=_links)
+    def get(self, id = None):
+        '''get a particular site or list of sites'''
+        if id == None:
+            site = Site.query.join(Instrument).all()
+        else:
+            site = Site.query.get_or_404(id)
+            #setattr(site, '_embedded', {'instruments': site.instruments.all()})
+        return site
+
+class SiteList(Resource):
+    fields = api.model('Site', site_fields)
+
+    _embedded = {'instruments': [instrument.fields] }
+
+    @hal.marshal_with(fields, envelope='sites')
     def get(self,id=None):
         if id == None:
             site = Site.query.join(Instrument).all()

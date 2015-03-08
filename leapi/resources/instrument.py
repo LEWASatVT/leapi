@@ -1,37 +1,43 @@
+from leapi import api, hal
 from leapi.models import Instrument,Site
-from leapi.hal import HalResource, marshal_with
-from flask.ext.restful import fields
-from flask.ext.restful import marshal_with
-from flask.ext.restful import reqparse
+from leapi.hal import Resource
+import flask.ext.restplus as restful
 
-class InstrumentResource(HalResource):
-    fields = {
-        'id': fields.Integer,
-        'name': fields.String,
-        'manufacturer': fields.String,
-        'model': fields.String,
-        'site_id': fields.String
-    }
+fields = {
+    'id': restful.fields.Integer(),
+    'name': restful.fields.String(),
+    'manufacturer': restful.fields.String(),
+    'model': restful.fields.String(),
+    'site_id': restful.fields.String()
+}
+
+class InstrumentResource(Resource):
+    fields = api.model('Instrument', fields)
 
     link_args = ['site_id']
-    _embedded = ['site', ('sensors','SensorResource')]
+
+    #_embedded = ['site', ('sensors','SensorResource')]
 
     def __init__(self):
-        self.parser = reqparse.RequestParser()
+        self.parser = api.parser()
         self.parser.add_argument('name', type=str)
         super(InstrumentResource,self).__init__()
 
 
-    @marshal_with(fields)
+    @hal.marshal_with(fields)
     def get(self, site_id, id = None):
+        '''list instruments at a particular site'''
         args = self.parser.parse_args()
+        filterexp=[Site.id==site_id]
         if args['name']:
             if not site_id:
                 abort(400, message="must use /sites/<site_id>/instruments to query instruments")
-            q = Instrument.query.join(Site).filter(Site.id==site_id,Instrument.name==args['name'])
-            return q.all()
+            filterexp.append(Instrument.name==args['name'])    
+
+        q = Instrument.query
+        
         if id == None:
-            r = Instrument.query.all()
+            r = q.join(Site).filter(*filterexp).all()
         else:
-            r = Instrument.query.get_or_404(id)
+            r = q.get_or_404(id)
         return r

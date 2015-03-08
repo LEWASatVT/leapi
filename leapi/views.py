@@ -19,14 +19,18 @@ api.add_resource(InstrumentResource,
 api.add_resource(SensorResource, 
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors', 
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors/<int:id>')
-api.add_resource(CountedMetricResource, 
-                 '/sites/<string:site_id>/metrics', 
-                 '/sites/<string:site_id>/metrics/<int:id>')
+
+api.add_resource(CountedMetricResource, '/sites/<string:site_id>/metrics/<int:id>')
+api.add_resource(CountedMetricList, '/sites/<string:site_id>/metrics')
 
 api.add_resource(UnitResource, '/units', '/units/<int:id>')
-api.add_resource(ObservationResource, 
+api.add_resource(ObservationList, 
                  '/sites/<string:site_id>/instruments/<int:instrument_id>/observations',
-                 '/sites/<string:site_id>/instruments/<string:instrument_name>/observations',
+                 '/sites/<string:site_id>/instruments/<string:instrument_name>/observations')
+
+api.add_resource(ObservationResource, 
+                 '/sites/<string:site_id>/instruments/<int:instrument_id>/observations/<int:id>',
+                 '/sites/<string:site_id>/instruments/<string:instrument_name>/observations/<int:id>',
 )
 
 api.add_resource(TimeseriesResource, 
@@ -40,3 +44,5 @@ def not_found(error):
 @app.errorhandler(400)
 def not_found(error):
     return make_response(json.dumps({'error': 'Bad request'}), 400)
+
+    
