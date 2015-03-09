@@ -15,7 +15,8 @@ class Observation(db.Model):
     __tablename__ = 'observations'
     #__metaclass__ = hal.MetaHal
     __table_args__ = (UniqueConstraint('site_id','instrument_id','metric_id', 'datetime',name='key_1'),)
-    #TODO: once we populate the instrument_name column
+                      ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name']),)
+    #TODO: once we populate the instrument_name column, 
     #ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name'])
     #After adding instrument_name column:
     #UPDATE observations AS o SET instrument_name = i.name FROM instruments AS i WHERE o.instrument_id = i.id;
