@@ -16,11 +16,12 @@ from leapi.dateparser import DateParser
 
 TZ = pytz.timezone('US/Eastern')
 
-def make_ts(r, instrument_id, site_id, since, nodata=False):
+def make_ts(r, instrument_name, site_id, since, nodata=False):
+    print("getting instrument ({},{})".format(site_id,instrument_name))
     units = list(set([ o.units for o in r]))[0]
     metric = list(set([ o.metric for o in r]))[0]
     data = [] if nodata else [ (ob.value, ob.datetime.isoformat()) for ob in r ]
-    instrument = Instrument.query.get(instrument_id)
+    instrument = Instrument.query.get([site_id,instrument_name])
     for o in [ metric, instrument ]:
         setattr(o,'site_id',site_id)
     ts = dict(data=data,
@@ -70,7 +71,6 @@ class TimeseriesResource(Resource):
         data = []
         filterexp = [Site.id==site_id,
                      Observation.site_id==Site.id,
-                     Observation.instrument_id==Instrument.id,
                      Observation.metric_id==Metric.id,
                      Metric.id==metric_id,
                      Observation.offset_value == None]
@@ -86,7 +86,7 @@ class TimeseriesResource(Resource):
         #TODO: based on use of parse_args above, can probably clean
         #this up. Remember, argparse can have differnet
         #internal/external names too, which could be handy
-        q = Observation.query.join(Observation.metric,Site,Instrument).\
+        q = Observation.query.join(Observation.metric,Site).\
             filter(*filterexp).\
             order_by(Observation.instrument_id,Observation.datetime.desc()).\
             group_by(Observation.instrument_id,Observation.id)
@@ -99,12 +99,12 @@ class TimeseriesResource(Resource):
             # TODO: If no observations exist for a site this will still
             # return an empty result
             filterexp.pop()
-            q = Observation.query.join(Observation.metric,Site,Instrument).\
+            q = Observation.query.join(Observation.metric,Site).\
             filter(*filterexp).limit(1)
             nodata = True
             
         r = q.all()
             
-        grp = [ make_ts(list(k),g,site_id, since=d, nodata=nodata) for g,k in itertools.groupby(r,lambda x: x.instrument_id) ]
+        grp = [ make_ts(list(k), g, site_id, since=d, nodata=nodata) for g,k in itertools.groupby(r,lambda x: x.instrument_name) ]
         grp = grp[0] if len(grp)==1 else grp
         return grp
