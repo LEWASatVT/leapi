@@ -25,7 +25,7 @@ class InstrumentResource(Resource):
 
 
     @hal.marshal_with(fields)
-    def get(self, site_id, id = None):
+    def get(self, site_id, name = None):
         '''list instruments at a particular site'''
         args = self.parser.parse_args()
         filterexp=[Site.id==site_id]
@@ -36,8 +36,8 @@ class InstrumentResource(Resource):
 
         q = Instrument.query
         
-        if id == None:
+        if name == None:
             r = q.join(Site).filter(*filterexp).all()
         else:
-            r = q.get_or_404(id)
+            r = q.get_or_404([site_id,name])
         return r
