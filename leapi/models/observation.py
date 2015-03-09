@@ -14,7 +14,7 @@ class OffsetType(db.Model):
 class Observation(db.Model):
     __tablename__ = 'observations'
     #__metaclass__ = hal.MetaHal
-    __table_args__ = (UniqueConstraint('site_id','instrument_id','metric_id', 'datetime',name='key_1'),)
+    __table_args__ = (UniqueConstraint('site_id','instrument_id','metric_id', 'datetime',name='key_1'),
                       ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name']),)
     #TODO: once we populate the instrument_name column, 
     #ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name'])
