@@ -5,7 +5,8 @@ from sqlalchemy import UniqueConstraint
 groups = db.Table('group_metrics',
                   db.Column('group_id', db.Integer, db.ForeignKey('groups.id')),
                   db.Column('metric_id', db.Integer, db.ForeignKey('variables.id')),
-                  db.Column('instrument_id', db.Integer, db.ForeignKey('instruments.id'))
+                  db.Column('site_id', db.Unicode, db.ForeignKey('sites.id')),
+                  db.Column('instrument_name', db.Integer)
               )
 
 class Group(db.Model):

@@ -116,19 +116,17 @@ class ObservationList(Resource):
         r = Observation(datetime=args['datetime'], value=args['value'], site_id=site_id)
         site = Site.query.get(site_id)
 
-        instrument = Instrument.query.filter(Site.id==site.id, Instrument.name==instrument_name).first()
+        #instrument = Instrument.query.filter(Site.id==site.id, Instrument.name==instrument_name).first()
             
         # TODO: When materialize views are implemented we can use CountedMetric
         metric = by_id_or_filter(Metric, args, 'metric')
         unit = Unit.query.filter_by(abbv=args['units']['abbv']).first()
-        sensor = by_id_or_filter(Sensor, args)
+        #sensor = by_id_or_filter(Sensor, args)
         
         if site == None:
             errors.append("No site with: {}".format(args['site']))
         if unit == None:
             errors.append("No unit with abbv: {}".format(args['units']['abbv']))
-        if instrument == None:
-            errors.append("No instrument with: {}".format(args['instrument']))
         if metric == None:
             errors.append("No metric with: {}".format(args['metric']))
         if len(errors) > 0:
@@ -137,9 +135,9 @@ class ObservationList(Resource):
 
         r.site_id = site.id
         r.site = site
-        r.instrument = instrument
-        r.instrument_name = instrument.name
-        r.instrument_id = instrument.id
+        #r.instrument = instrument
+        r.instrument_name = instrument_name
+        #r.instrument_id = instrument.id
         r.metric = metric
         r.metric_id = metric.id
         r.units = unit
@@ -158,6 +156,7 @@ class ObservationList(Resource):
         except DataError, e:
             abort(400, message=dict(data_error=str(e),r=r))
         except IntegrityError, e:
+            print("IntegrityError: {}".format(e))
             abort(409, message=dict(integrity_error=e.message))
         except FlushError, e:
             abort(500, message=dict(flush_error=e.message))

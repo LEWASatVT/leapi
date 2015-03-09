@@ -14,8 +14,8 @@ class OffsetType(db.Model):
 class Observation(db.Model):
     __tablename__ = 'observations'
     #__metaclass__ = hal.MetaHal
-    __table_args__ = (UniqueConstraint('site_id','instrument_id','metric_id', 'datetime',name='key_1'),
-                      ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name']),)
+    __table_args__ = (UniqueConstraint('site_id','instrument_name','metric_id', 'datetime',name='key_1'),
+                      ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name'],name='observation_instrument_fk'),)
 
     #After adding instrument_name column:
     #UPDATE observations AS o SET instrument_name = i.name FROM instruments AS i WHERE o.instrument_id = i.id WHERE o.instrument_name IS NULL;
@@ -25,7 +25,6 @@ class Observation(db.Model):
     datetime = db.Column(db.DateTime)
     site_id = db.Column(db.String, db.ForeignKey('sites.id'), nullable=False)
     instrument_name = db.Column(db.String)
-    instrument_id = db.Column(db.Integer, nullable=False)
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id') ) #TODO once established, make nullable=False
     metric_id = db.Column(db.Integer, db.ForeignKey('variables.id'), nullable=False)
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
