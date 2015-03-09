@@ -140,7 +140,6 @@ class ObservationList(Resource):
         r.instrument = instrument
         r.instrument_name = instrument.name
         r.instrument_id = instrument.id
-        r.instrument_name = instrument.name
         r.metric = metric
         r.metric_id = metric.id
         r.units = unit
