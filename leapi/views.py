@@ -15,7 +15,7 @@ api.add_resource(SiteList, '/')
 api.add_resource(SiteResource, '/sites', '/sites/<string:id>')
 api.add_resource(InstrumentResource, 
                  '/sites/<string:site_id>/instruments',
-                 '/sites/<string:site_id>/instruments/<int:id>')
+                 '/sites/<string:site_id>/instruments/<string:name>')
 api.add_resource(SensorResource, 
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors', 
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors/<int:id>')
@@ -25,11 +25,9 @@ api.add_resource(CountedMetricList, '/sites/<string:site_id>/metrics')
 
 api.add_resource(UnitResource, '/units', '/units/<int:id>')
 api.add_resource(ObservationList, 
-                 '/sites/<string:site_id>/instruments/<int:instrument_id>/observations',
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/observations')
 
 api.add_resource(ObservationResource, 
-                 '/sites/<string:site_id>/instruments/<int:instrument_id>/observations/<int:id>',
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/observations/<int:id>',
 )
 

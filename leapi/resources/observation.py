@@ -6,7 +6,7 @@ from sqlalchemy.orm.exc import FlushError
 from flask.ext.restplus import fields, Resource
 from flask.ext.restful import abort
 
-from leapi import db, api, hal
+from leapi import db, app, api, hal
 from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType
 from leapi.resources import metric, unit, instrument, sensor
 
@@ -37,7 +37,7 @@ parser.add_argument('site', type=dict, help="missing site_id", location='json')
 parser.add_argument('sensor', type=dict) #TODO once established, make required 
 parser.add_argument('offset', type=dict, help="physical or temporal offset of observed value", location='json')
 parser.add_argument('stderr', type=float, help="standard deviation of observed value", location='json')
-parser.add_argument('magicsecret', type=str)
+parser.add_argument('magicsecret', default='magicsecret', type=str)
 
 #parser = api.parser()
 #parser.add_argument('body', type=dict, required=True, help="Body of request", location="json")
@@ -110,6 +110,9 @@ class ObservationList(Resource):
         errors = []
 
         args = parser.parse_args()
+        if not args['magicsecret'] == app.config['MAGICSECRET']:
+            abort(403)
+            
         r = Observation(datetime=args['datetime'], value=args['value'])
         if site_id:
             site = Site.query.get(site_id)
@@ -163,6 +166,7 @@ class ObservationList(Resource):
         r.site_id = site.id
         r.site = site
         r.instrument = instrument
+        r.instrument_name = instrument.name
         r.instrument_id = instrument.id
         r.sensor_id = sensor.id
         r.metric = metric
