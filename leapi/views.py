@@ -25,11 +25,9 @@ api.add_resource(CountedMetricList, '/sites/<string:site_id>/metrics')
 
 api.add_resource(UnitResource, '/units', '/units/<int:id>')
 api.add_resource(ObservationList, 
-                 '/sites/<string:site_id>/instruments/<int:instrument_id>/observations',
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/observations')
 
 api.add_resource(ObservationResource, 
-                 '/sites/<string:site_id>/instruments/<int:instrument_id>/observations/<int:id>',
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/observations/<int:id>',
 )
 
