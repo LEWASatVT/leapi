@@ -166,6 +166,7 @@ class ObservationList(Resource):
         r.site_id = site.id
         r.site = site
         r.instrument = instrument
+        r.instrument_name = instrument.name
         r.instrument_id = instrument.id
         r.sensor_id = sensor.id
         r.metric = metric

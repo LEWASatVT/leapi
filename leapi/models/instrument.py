@@ -1,11 +1,11 @@
 from leapi import db
-from sqlalchemy import UniqueConstraint
-
+from sqlalchemy import UniqueConstraint,PrimaryKeyConstraint
+#7deeec769a
 class Instrument(db.Model):
     __tablename__ = 'instruments'
-    __table_args__ = (UniqueConstraint('site_id', 'name',name='instrument_site_name_key'),)
+    __table_args__ = (PrimaryKeyConstraint('site_id', 'name',name='instrument_site_name_pk'),)
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer)
     name = db.Column(db.Unicode)
     model = db.Column(db.Unicode)
     manufacturer = db.Column(db.Unicode)
