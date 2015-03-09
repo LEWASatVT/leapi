@@ -1,6 +1,6 @@
 from leapi import db
-from sqlalchemy import UniqueConstraint,PrimaryKeyConstraint
-#7deeec769a
+from sqlalchemy import UniqueConstraint, PrimaryKeyConstraint
+
 class Instrument(db.Model):
     __tablename__ = 'instruments'
     __table_args__ = (PrimaryKeyConstraint('site_id', 'name',name='instrument_site_name_pk'),)
@@ -12,7 +12,8 @@ class Instrument(db.Model):
     site_id = db.Column(db.Unicode, db.ForeignKey('sites.id'))
 
     sensors = db.relationship('Sensor', backref='instruments')
-
+    observations = db.relationship('Observation', backref='instruments')
+    
     def __init__(self,name):
         self.name = name
 

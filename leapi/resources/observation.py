@@ -103,7 +103,7 @@ class ObservationList(Resource):
     @api.doc(responses={201: 'Observation created'}, description="Only enough fields in the embedded resources units,metric and instrument need be provided to identify an existing record")
     @api.marshal_with(fields, code=201)
     @api.expect(post_fields)
-    def post(self, site_id=None, instrument_id=None, instrument_name=None):
+    def post(self, site_id, instrument_name):
         '''Post a new observation'''
         if not request.json:
             abort(400, message="request must be JSON")
@@ -113,21 +113,10 @@ class ObservationList(Resource):
         if not args['magicsecret'] == app.config['MAGICSECRET']:
             abort(403)
             
-        r = Observation(datetime=args['datetime'], value=args['value'])
-        if site_id:
-            site = Site.query.get(site_id)
-        else:
-            site = by_id_or_filter(Site, args)
+        r = Observation(datetime=args['datetime'], value=args['value'], site_id=site_id)
+        site = Site.query.get(site_id)
 
-        if instrument_id and instrument_name:
-            abort(409, message="supply either instrument id OR instrument name")
-
-        if instrument_name:
-            instrument = Instrument.query.filter(Site.id==site.id, Instrument.name==instrument_name).first()
-        elif instrument_id:
-            instrument = Instrument.query.get(instrument_id)
-        else:
-            instrument = by_id_or_filter(Instrument, args)
+        instrument = Instrument.query.filter(Site.id==site.id, Instrument.name==instrument_name).first()
             
         # TODO: When materialize views are implemented we can use CountedMetric
         metric = by_id_or_filter(Metric, args, 'metric')
@@ -146,29 +135,11 @@ class ObservationList(Resource):
             print("errors: {}".format(errors))
             abort(400, message=errors)
 
-        if sensor == None:
-            #try to get sensor by args[sensor] 
-            #try to get sensor by name and instrument
-            sensor = Sensor.query.filter(Sensor.name==metric.name,Sensor.instrument_id==instrument.id).first()
-            if not sensor:
-                sensor = Sensor(name=metric.name)
-                sensor.metric=metric
-                sensor.instrument=instrument
-                db.session.add(sensor)
-                try:
-                    db.session.commit()
-                except DataError as e:
-                    abort(400, message=dict(data_error=str(e)))
-                except IntegrityError as e:
-                    abort(409, message=dict(integrity_error=str(e)))
-            
-            #return dict(messages=errors), 400
         r.site_id = site.id
         r.site = site
         r.instrument = instrument
         r.instrument_name = instrument.name
         r.instrument_id = instrument.id
-        r.sensor_id = sensor.id
         r.metric = metric
         r.metric_id = metric.id
         r.units = unit
