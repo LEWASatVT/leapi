@@ -88,8 +88,8 @@ class TimeseriesResource(Resource):
         #internal/external names too, which could be handy
         q = Observation.query.join(Observation.metric,Site).\
             filter(*filterexp).\
-            order_by(Observation.instrument_id,Observation.datetime.desc()).\
-            group_by(Observation.instrument_id,Observation.id)
+            order_by(Observation.instrument_name,Observation.datetime.desc()).\
+            group_by(Observation.instrument_name,Observation.id)
         nodata = False
         if args['limit']:
             q = q.limit(args['limit'])
