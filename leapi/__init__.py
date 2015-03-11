@@ -15,7 +15,7 @@ api = Api(app, version='0.9', title='LeAPI',
           description='A multi-site environmental monitoring API developed at and for the <a href="http://www.lewas.centers.vt.edu">LEWAS Lab</a>',
           contact='dmaczka@vt.edu', ui=False, default='leapi')
         
-hal = Hal(api, marshal_with=api.marshal_with, debug=app.debug)
+hal = Hal(api, marshal_with=api.marshal_with)
 
 import leapi.views, leapi.models, leapi.resources
 import leapi.archive

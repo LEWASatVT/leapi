@@ -1,18 +1,15 @@
-import logging
-
 from leapi import app
 
 def builderror_handler(error, endpoint, values):
-    url = '/Error500'
     if app.debug:
-        url = 'piffily: ' + str(error)
-
-    logging.error("BuildError({}): {} with values {}".format(endpoint,error,values))
-    return url
+        return str(error)
+    else:
+        return None
 
 app.url_build_error_handlers.append(builderror_handler)
 
 if not app.debug:
+    import logging
     from logging import handlers
     file_handler = handlers.RotatingFileHandler(app.config.get('LOGFILE', '/var/log/flask/leapi.log'))
     file_handler.setLevel(logging.WARNING)
