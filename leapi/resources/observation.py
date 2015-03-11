@@ -102,17 +102,11 @@ def prep_observation(odoc, site_id, instrument_name):
             print str(args['CLIENT_VERIFY']) + str(args['CLIENT_CERT'])
         return (r, 403, [])
 
-    site = Site.query.get(site_id)
-
-    #instrument = Instrument.query.filter(Site.id==site.id, Instrument.name==instrument_name).first()
-
     # TODO: When materialize views are implemented we can use CountedMetric
     metric = by_id_or_filter(Metric, args, 'metric')
     unit = Unit.query.filter_by(abbv=args['units']['abbv']).first()
     #sensor = by_id_or_filter(Sensor, args)
 
-    if site == None:
-        messages.append("No site with: {}".format(args['site']))
     if unit == None:
         messages.append("No unit with abbv: {}".format(args['units']['abbv']))
     if metric == None:
@@ -123,11 +117,8 @@ def prep_observation(odoc, site_id, instrument_name):
 
     r = Observation(datetime=args['datetime'], value=args['value'], site_id=site_id)
 
-    r.site_id = site.id
-    r.site = site
-    #r.instrument = instrument
+    r.site_id = site_id
     r.instrument_name = instrument_name
-    #r.instrument_id = instrument.id
     r.metric = metric
     r.metric_id = metric.id
     r.units = unit
@@ -182,7 +173,6 @@ class ObservationList(Resource):
         
         if isinstance(request.json, list):
             codes = [ prep_observation(o, site_id, instrument_name) for o in request.json]
-                
         else:
             codes = [ prep_observation(request.json, site_id, instrument_name) ]
 
