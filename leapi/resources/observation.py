@@ -96,6 +96,10 @@ def prep_observation(odoc, site_id, instrument_name):
     r = None
 
     if not args['magicsecret'] == app.config['MAGICSECRET']:
+        if args['magicsecret'] == 'ssldebugtest':
+            print("ssl debug mode")
+            #engage super secret ssl diagnostics mode!
+            print str(args['CLIENT_VERIFY']) + str(args['CLIENT_CERT'])
         return (r, 403, [])
 
     site = Site.query.get(site_id)
@@ -166,7 +170,6 @@ class ObservationList(Resource):
     fields=get_fields
     
     @api.doc(responses={201: 'Observation created'}, description="Only enough fields in the embedded resources units,metric and instrument need be provided to identify an existing record")
-
     @api.marshal_list_with(observation_response, code=201)
     @api.expect(post_fields)
     def post(self, site_id, instrument_name):
