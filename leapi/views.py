@@ -20,10 +20,10 @@ api.add_resource(SensorResource,
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors', 
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors/<int:id>')
 
-api.add_resource(CountedMetricResource, '/sites/<string:site_id>/metrics/<int:id>')
+api.add_resource(CountedMetricResource, '/sites/<string:site_id>/metrics/<int:id>', endpoint='metricresource')
 api.add_resource(CountedMetricList, '/sites/<string:site_id>/metrics')
 
-api.add_resource(UnitResource, '/units', '/units/<int:id>')
+api.add_resource(UnitResource, '/units', '/units/<int:id>', endpoint='unitsresource')
 
 api.add_resource(ObservationList, '/sites/<string:site_id>/instruments/<string:instrument_name>/observations')
 
