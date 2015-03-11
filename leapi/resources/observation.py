@@ -175,8 +175,8 @@ class ObservationList(Resource):
             print("request was not JSON")
             abort(400, message="request must be JSON")
         errors = []
-
         codes = []
+        
         if isinstance(request.json, list):
             codes = [ prep_observation(o, site_id, instrument_name) for o in request.json]
                 
@@ -186,7 +186,20 @@ class ObservationList(Resource):
         for (r,code,errors) in codes:
             if code == 201:
                 db.session.add(r)
-        db.session.commit()
-        #Return a list of the response data, and max status code across all observations
-        response = [ {'status': status, 'response': data, 'messages': messages} for (data,status,messages) in codes ]
+
+        #TODO: On some of these errors, IntegrityError in particular, it may make sense
+        #to go back and try each observation as a separate commit to find the one that caused the error
+        #then update the returned status
+        try:
+            db.session.commit()
+        except DataError, e:
+            abort(400, message=dict(data_error=str(e),r=r))
+        except IntegrityError, e:
+            print("IntegrityError: {}".format(e))
+            abort(409, message=dict(integrity_error=e.message))
+        except FlushError, e:
+            abort(500, message=dict(flush_error=e.message))
+        else:
+            #Return a list of the response data, and max status code across all observations
+            response = [ {'status': status, 'response': data, 'messages': messages} for (data,status,messages) in codes ]
         return response, max( [ s for d,s,m in codes ] )
