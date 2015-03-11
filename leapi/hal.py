@@ -118,7 +118,7 @@ class Hal():
 
         if '_links' in fields:
             for k,v in links.items():
-                fields['_links'][k] = self.api.model(k, {'href': RobustUrl(v[0])})
+                fields['_links'][k] = self.api.model(k, {'href': restful.fields.Url(v[0])})
         return fields
     
     def marshal_with(self, fields, **kwargs):
@@ -206,25 +206,6 @@ def make_links(res, links, default_args={}):
 def set_links(links, sup_args={}):
     return lambda r: set_property(r, '_links',  make_links(r, links, sup_args))
 
-class RobustUrl(restful.fields.Url):
-    def __init__(self, *args, **kwargs):
-        super(RobustUrl,self).__init__(*args, **kwargs)
-
-    def output(self,key,obj):
-        resp = {'message': "key: {}, obj: {}".format(key,obj)}
-        if obj is not None:
-            try:
-                resp = super(RobustUrl,self).output(key,obj)
-            except BuildError as e:
-                print("got BuildError: {}".format(str(e)))
-                resp = 'BuildError: ' + str(e)
-            except ValueError as e:
-                print("got ValueError: {}".format(str(e)))
-                resp = 'ValueError: ' + str(e)
-            return resp
-        else:
-            return resp
-
 class HalResourceType(MethodViewType):
     def __new__(cls, name, bases, attrs):
         if name.startswith('None'):
@@ -235,10 +216,10 @@ class HalResourceType(MethodViewType):
         #for attrname, attrvalue in attr.iteritems():
         #attrs['_link_args'] = ['id'] + ([] if 'link_args' not in attrs else attrs['link_args'])
         if 'fields' in attrs:
-            links = {'self': restful.fields.Nested({'href': RobustUrl(name.lower()) }) }
+            links = {'self': restful.fields.Nested({'href': restful.fields.Url(name.lower()) }) }
             if '_links' in attrs:
                 for t,v in attrs['_links'].items():
-                    links[t] = restful.fields.Nested({'href': RobustUrl(v[0].lower())})
+                    links[t] = restful.fields.Nested({'href': restful.fields.Url(v[0].lower())})
             attrs['_nested_links'] = links
             #attrs['fields']['_links'] = restful.fields.Nested(links)
             #if '_embedded' in attrs:
