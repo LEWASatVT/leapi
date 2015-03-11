@@ -4,12 +4,12 @@ import json
 
 from leapi.resources import *
 
-@api.representation('application/json')
-def output_json(data, code, headers=None):
-    resp = make_response(json.dumps(data), code)
+#@api.representation('application/json')
+#def output_json(data, code, headers=None):
+#    resp = make_response(json.dumps(data), code)
     #print("output_json.data: {}".format(data['_links']))
-    resp.headers.extend(headers or {})
-    return resp
+#    resp.headers.extend(headers or {})
+#    return resp
 
 api.add_resource(SiteList, '/')
 api.add_resource(SiteResource, '/sites', '/sites/<string:id>')
@@ -26,6 +26,9 @@ api.add_resource(CountedMetricList, '/sites/<string:site_id>/metrics')
 api.add_resource(UnitResource, '/units', '/units/<int:id>')
 api.add_resource(ObservationList, 
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/observations')
+
+api.add_resource(ObservationListPost, 
+                 '/sites/<string:site_id>/instruments/<string:instrument_name>/observations2')
 
 api.add_resource(ObservationResource, 
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/observations/<int:id>',
