@@ -5,7 +5,6 @@ class Instrument(db.Model):
     __tablename__ = 'instruments'
     __table_args__ = (PrimaryKeyConstraint('site_id', 'name',name='instrument_site_name_pk'),)
 
-    id = db.Column(db.Integer)
     name = db.Column(db.Unicode)
     model = db.Column(db.Unicode)
     manufacturer = db.Column(db.Unicode)
@@ -18,4 +17,4 @@ class Instrument(db.Model):
         self.name = name
 
     def __repr__(self):
-        return '<instrument id {}>'.format(self.id)
+        return '<instrument name {}>'.format(self.name)
