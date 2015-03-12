@@ -66,9 +66,12 @@ class CountedMetricResource(Resource):
     @hal.marshal_with(fields, links=_links)
     def get(self, id, site_id=None):
         '''fetch a single metric'''
+
         filters=[]
         if site_id:
             filters.append(CountedMetric.site_id==site_id)
+        if id:
+            filters.append(CountedMetric.id==id)
         
         q = CountedMetric.query
 
