@@ -13,7 +13,6 @@ class OffsetType(db.Model):
 
 class Observation(db.Model):
     __tablename__ = 'observations'
-    #__metaclass__ = hal.MetaHal
     __table_args__ = (UniqueConstraint('site_id','instrument_name','metric_id', 'datetime',name='key_1'),
                       ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name'],name='observation_instrument_fk'),)
 
@@ -33,6 +32,24 @@ class Observation(db.Model):
 
     metric = db.relationship('Metric')
     units = db.relationship('Unit')
-    #instrument = db.relationship('Instrument') 
+    instrument = db.relationship('Instrument', foreign_keys=[site_id,instrument_name]) 
     sensor = db.relationship('Sensor')
     offset_type = db.relationship('OffsetType')
+
+    @property
+    def offset(self):
+        return {'value': self.offset_value, 'type_id': self.offset_type_id, 'type': self.offset_type.description } 
+
+    def __unicode__(self):
+        value = u"{} {} of {}({})".format(self.metric.medium, self.metric.name, self.value, self.units.abbv)
+        if self.stderr:
+            value = value + u" \u03C3{}".format(self.stderr)
+        if self.offset_type:
+            value = value + u" offset {} {}".format(self.offset_type.description, self.offset_value)
+        return value + u" observed by {} at {}".format(self.instrument.name, self.site.name).encode('utf-8')
+        
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    def __repr__(self):
+        return "Observation {}: {}({}), {}".format(self.id, self.value, self.units.abbv, {'instrument': self.instrument.name, 'site_id': self.site.id}).encode('utf-8')

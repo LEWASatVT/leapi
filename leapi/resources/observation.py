@@ -39,14 +39,27 @@ parser.add_argument('offset', type=dict, help="physical or temporal offset of ob
 parser.add_argument('stderr', type=float, help="standard deviation of observed value", location='json')
 parser.add_argument('magicsecret', default='magicsecret', type=str)
 
+fetch_parser = api.parser()
+fetch_parser.add_argument('metric.name', type=str, location='args')
+fetch_parser.add_argument('metric.medium', type=str, location='args')
+fetch_parser.add_argument('limit', type=int, default=100, location='args')
+
 #parser = api.parser()
 #parser.add_argument('body', type=dict, required=True, help="Body of request", location="json")
+
+offset_model = api.model('offset',
+                         {'value': fields.Float(),
+                          'type_id': fields.Integer(),
+                          'type': fields.String()
+                          })
 
 observation_model = api.model('BaseObservation',
                               {
                                   'datetime': fields.DateTime(required=True, description='A formated datetime string'),
                                   'value': fields.Float(required=True),
-                                  'offset': fields.Nested(api.model('offset', {'value': fields.Float(), 'type': fields.String(enum=['A','B'])})), 
+                                  'offset_value': fields.Float(),
+                                  'offset_type_id': fields.Integer(),
+                                  'offset': fields.Nested(offset_model), 
                                   'stderr': fields.Float(description='Standard error associated with value'),
                                   'site_id': fields.String(required=True)
                               })
@@ -123,6 +136,7 @@ def prep_observation(odoc, site_id, instrument_name):
     r.metric_id = metric.id
     r.units = unit
     r.stderr = args['stderr']
+
     if args['offset']:
         offset = OffsetType.query.filter_by(description=args['offset']['type']).first()
         r.offset_value = args['offset']['value']
@@ -137,22 +151,19 @@ class ObservationResource(Resource):
     
     @hal.marshal_with(fields, embedded=_embedded)
     @api.doc(description="Not particularly useful for timeseries analysis, that's what the timeseries resource is for")
-    def get(self, site_id, instrument_name=None, instrument_id=None, id = None):
+    def get(self, site_id, id, instrument_name=None):
         '''get a particular observation or list of observations. Not terribly useful, you probably want timeseries'''
-
-        #don't really need to check for an instrument specifier,
-        #observation ids are unique and the routing rules only allow
-        #URIs with instrument identifiers.
-
-        #if not (instrument_name or instrument_id):
-        #    api.abort(400)
-        filterexp = [Site.id==site_id,Instrument.name==instrument_name,Observation.site_id==site_id,Observation.instrument_id==Instrument.id]
-        if 'metric' in ( k.split('.')[0] for k in request.args.keys() ):
-            mkeys = [ k.split('.')[1] for k in request.args.keys() if k.split('.')[0] == 'metric' ]
-            filter_by = dict([ (k.split('.')[1], v) for k,v in request.args.items() if k.split('.')[0] == 'metric' ])
-            r = Observation.query.join(Site,Instrument,Observation.metric).filter(*filterexp).limit(200).all()
-        elif id == None:
-            r = Observation.query.join(Site,Instrument).filter(*filterexp).order_by(Observation.datetime.desc()).limit(200).all()
+        filters = []
+        if instrument_name is not None:
+            filters.append(Instrument.name==instrument_name)
+        if site_id is not None:
+            filters.append(Site.id==site_id)
+        
+        if len(filters) > 0:
+            filters.append(Observation.id==id)
+            r = Observation.query.join(Site).filter(*filters).first()
+            if not r:
+                abort(404)
         else:
             r = Observation.query.get_or_404(id)
         return r
@@ -160,9 +171,33 @@ class ObservationResource(Resource):
 class ObservationList(Resource):
     fields=get_fields
     
-    @api.doc(responses={201: 'Observation created'}, description="Only enough fields in the embedded resources units,metric and instrument need be provided to identify an existing record")
+    @hal.marshal_with(fields, embedded=_embedded, as_list=True)
+    @api.doc(parser=fetch_parser)
+    def get(self, site_id, instrument_name=None):
+        args = fetch_parser.parse_args()
+
+        filterexp = [Site.id==site_id,
+                     Observation.site_id==site_id,
+                     Observation.metric_id==Metric.id,
+                     Observation.instrument_name==Instrument.name]
+        if instrument_name:
+            filterexp.append(Observation.instrument_name==instrument_name)
+        if args['metric.name']:
+            filterexp.append(Metric.name==args['metric.name'])
+        if args['metric.medium']:
+            filterexp.append(Metric.medium==args['metric.medium'])
+        
+        q = Observation.query.join(Site,Instrument,Metric).\
+                             filter(*filterexp).\
+                             order_by(Observation.datetime.desc(),Observation.metric_id,Observation.offset_value).\
+                             limit(args['limit'])
+        result = q.all()
+
+        return result
+        
     @api.marshal_list_with(observation_response, code=201)
     @api.expect(post_fields)
+    @api.doc(responses={201: 'Observation created'}, description="Only enough fields in the embedded resources units,metric and instrument need be provided to identify an existing record")
     def post(self, site_id, instrument_name):
         '''Post a new observation'''
         if not request.json:

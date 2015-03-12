@@ -86,7 +86,7 @@ class TimeseriesResource(Resource):
         #TODO: based on use of parse_args above, can probably clean
         #this up. Remember, argparse can have differnet
         #internal/external names too, which could be handy
-        q = Observation.query.join(Observation.metric,Site).\
+        q = Observation.query.join(Site).\
             filter(*filterexp).\
             order_by(Observation.instrument_name,Observation.datetime.desc()).\
             group_by(Observation.instrument_name,Observation.id)
