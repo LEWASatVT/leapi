@@ -109,13 +109,17 @@ def prep_observation(odoc, site_id, instrument_name):
     r = None
 
     auth = False
-    if ('MAGICSECRET' in app.config) and (args['magicsecret'] == app.config['MAGICSECRET']):
-        auth = True
-    if request.environ['CLIENT_VERIFY'] == "SUCCESS":
-        #http://stackoverflow.com/a/23654676
-        cert = request.environ['CLIENT_CERT'].split("/")[1:]
-        cert = {p[0]: p[1] for p in [a.split("=") for a in cert]}
-        if cert["CN"].split(".")[0] == site_id:
+    if 'CLIENT_VERIFY' in request.environ:
+        # use SSL auth
+        if request.environ['CLIENT_VERIFY'] == "SUCCESS":
+            #http://stackoverflow.com/a/23654676
+            cert = request.environ['CLIENT_CERT'].split("/")[1:]
+            cert = {p[0]: p[1] for p in [a.split("=") for a in cert]}
+            if cert["CN"].split(".")[0] == site_id:
+                auth = True
+    else:
+        #Fall back to password auth
+        if ('MAGICSECRET' in app.config) and (args['magicsecret'] == app.config['MAGICSECRET']):
             auth = True
     if not auth:
         return (r, 403, [])
