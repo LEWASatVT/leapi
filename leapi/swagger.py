@@ -1,4 +1,5 @@
-from leapi import app
+from leapi import app, api
+from flask.ext.restplus import apidoc
 
 @app.route('/leapi-doc/', endpoint='doc')
 def swagger_ui():
