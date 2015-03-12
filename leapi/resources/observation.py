@@ -108,11 +108,16 @@ def prep_observation(odoc, site_id, instrument_name):
 
     r = None
 
-    if not args['magicsecret'] == app.config['MAGICSECRET']:
-        if args['magicsecret'] == 'ssldebugtest':
-            print("ssl debug mode")
-            #engage super secret ssl diagnostics mode!
-            print str(args['CLIENT_VERIFY']) + str(args['CLIENT_CERT'])
+    auth = False
+    if ('MAGICSECRET' in app.config) and (args['magicsecret'] == app.config['MAGICSECRET']):
+        auth = True
+    if request.environ['CLIENT_VERIFY'] == "SUCCESS":
+        #http://stackoverflow.com/a/23654676
+        cert = request.environ['CLIENT_CERT'].split("/")[1:]
+        cert = {p[0]: p[1] for p in [a.split("=") for a in cert]}
+        if cert["CN"].split(".")[0] == site_id:
+            auth = True
+    if not auth:
         return (r, 403, [])
 
     # TODO: When materialize views are implemented we can use CountedMetric
