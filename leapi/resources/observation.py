@@ -147,10 +147,21 @@ class ObservationResource(Resource):
     
     @hal.marshal_with(fields, embedded=_embedded)
     @api.doc(description="Not particularly useful for timeseries analysis, that's what the timeseries resource is for")
-    def get(self, site_id, id):
+    def get(self, site_id, id, instrument_name=None):
         '''get a particular observation or list of observations. Not terribly useful, you probably want timeseries'''
-
-        r = Observation.query.get_or_404(id)
+        filters = []
+        if instrument_name is not None:
+            filters.append(Instrument.name==instrument_name)
+        if site_id is not None:
+            filters.append(Site.id==site_id)
+        
+        if len(filters) > 0:
+            filters.append(Observation.id==id)
+            r = Observation.query.join(Site).filter(*filters).first()
+            if not r:
+                abort(404)
+        else:
+            r = Observation.query.get_or_404(id)
         return r
 
 class ObservationList(Resource):
