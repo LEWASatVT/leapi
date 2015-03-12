@@ -11,7 +11,7 @@ class Instrument(db.Model):
     site_id = db.Column(db.Unicode, db.ForeignKey('sites.id'))
 
     sensors = db.relationship('Sensor', backref='instruments')
-    observations = db.relationship('Observation', backref='instruments')
+    observations = db.relationship('Observation', lazy="dynamic")
     
     def __init__(self,name):
         self.name = name
