@@ -6,10 +6,11 @@ class Config(object):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URI']
     SQLALCHEMY_MIGRATE_REPO = os.path.join(basedir, 'db_repository')
-
+    MAGICSECRET='changethisafterssl'
+    
 class ProductionConfig(Config):
     DEBUG = False
-
+    
 class StagingConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
