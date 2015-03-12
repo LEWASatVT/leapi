@@ -13,7 +13,6 @@ class OffsetType(db.Model):
 
 class Observation(db.Model):
     __tablename__ = 'observations'
-    #__metaclass__ = hal.MetaHal
     __table_args__ = (UniqueConstraint('site_id','instrument_name','metric_id', 'datetime',name='key_1'),
                       ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name'],name='observation_instrument_fk'),)
 
@@ -33,6 +32,10 @@ class Observation(db.Model):
 
     metric = db.relationship('Metric')
     units = db.relationship('Unit')
-    #instrument = db.relationship('Instrument') 
+    instrument = db.relationship('Instrument', foreign_keys=[site_id,instrument_name]) 
     sensor = db.relationship('Sensor')
     offset_type = db.relationship('OffsetType')
+
+    @property
+    def offset(self):
+        return {'value': self.offset_value, 'type_id': self.offset_type_id, 'type': self.offset_type.description } 
