@@ -1,6 +1,7 @@
 import itertools
-
 import pytz
+import logging
+from datetime import datetime
 
 from flask import request
 from flask.ext.restplus import fields
@@ -13,14 +14,30 @@ from leapi import api, hal
 from leapi.hal import Resource
 from leapi.resources import metric, unit, instrument
 from leapi.dateparser import DateParser
+from leapi.fields import Tuple
 
-TZ = pytz.timezone('US/Eastern')
+tz = pytz.timezone('US/Eastern')
+
+data_sample_full = api.model('datasample', {
+    'value': fields.Float(required=True),
+    'stderr': fields.Float(),
+    'datetime': fields.DateTime()
+})
+
+data_sample = Tuple(fields.Float(required=True), fields.DateTime('iso8601', required=True))
+                    
+parser = api.parser()
+parser.add_argument('since', type=str, default='1 days', help="Return observations made since this date expression", location='args')
+parser.add_argument('limit', type=int, help="Limit total number of observations returned to this integer", location='args')
+
+dateparser =  DateParser()
 
 def make_ts(r, instrument_name, site_id, since, nodata=False):
-    print("getting instrument ({},{})".format(site_id,instrument_name))
+    logging.info("making timeseries for instrument ({},{})".format(site_id,instrument_name))
     units = list(set([ o.units for o in r]))[0]
     metric = list(set([ o.metric for o in r]))[0]
-    data = [] if nodata else [ (ob.value, ob.datetime.isoformat()) for ob in r ]
+    data = [] if nodata else [ (ob.value, ob.datetime) for ob in r ]
+
     instrument = Instrument.query.get([site_id,instrument_name])
     for o in [ metric, instrument ]:
         setattr(o,'site_id',site_id)
@@ -36,12 +53,6 @@ def make_ts(r, instrument_name, site_id, since, nodata=False):
         ts['count']=metric.count
 
     return ts
-                
-parser = api.parser()
-parser.add_argument('since', type=str, default='1 days', help="Return observations made since this date expression", location='args')
-parser.add_argument('limit', type=int, help="Limit total number of observations returned to this integer", location='args')
-
-dateparser =  DateParser()
 
 @api.doc(params={'site_id': 'Site ID: obtained by following links from API root.', 'metric_id': 'Metric ID: obtained by following links from API root.'}, description=''' 
 This is considered the primary resource for client use. The data
@@ -53,7 +64,7 @@ class TimeseriesResource(Resource):
     fields = api.model('TimeseriesResource', {
         'length': fields.Integer(),
         'since': fields.DateTime(),
-        'data': fields.Raw(),
+        'data': fields.List(data_sample),
     })
 
     _embedded = { 'metric': metric.MetricResource.fields,
@@ -86,7 +97,7 @@ class TimeseriesResource(Resource):
         #TODO: based on use of parse_args above, can probably clean
         #this up. Remember, argparse can have differnet
         #internal/external names too, which could be handy
-        q = Observation.query.join(Site).\
+        q = Observation.query.\
             filter(*filterexp).\
             order_by(Observation.instrument_name,Observation.datetime.desc()).\
             group_by(Observation.instrument_name,Observation.id)
