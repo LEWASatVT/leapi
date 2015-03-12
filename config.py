@@ -19,6 +19,7 @@ class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
     SERVER_NAME = "localhost:5050"
-
+    MAGICSECRET = "changethisafterssl"
+    
 class TestingConfig(Config):
     TESTING = True

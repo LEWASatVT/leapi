@@ -108,7 +108,16 @@ def prep_observation(odoc, site_id, instrument_name):
 
     r = None
 
-    if not args['magicsecret'] == app.config['MAGICSECRET']:
+    auth = False
+    if ('MAGICSECRET' in app.config) and (args['magicsecret'] == app.config['MAGICSECRET']):
+        auth = True
+    if request.environ['CLIENT_VERIFY'] == "SUCCESS":
+        #http://stackoverflow.com/a/23654676
+        cert = request.environ['CLIENT_CERT'].split("/")[1:]
+        cert = {p[0]: p[1] for p in [a.split("=") for a in cert]}
+        if cert["CN"].split(".")[0] == site_id:
+            auth = True
+    if not auth:
         return (r, 403, [])
 
     # TODO: When materialize views are implemented we can use CountedMetric
@@ -191,7 +200,6 @@ class ObservationList(Resource):
 
         return result
         
-
     @api.marshal_list_with(observation_response, code=201)
     @api.expect(post_fields)
     @api.doc(responses={201: 'Observation created'}, description="Only enough fields in the embedded resources units,metric and instrument need be provided to identify an existing record")
