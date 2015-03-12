@@ -101,14 +101,16 @@ def get_class_of_funct(f, *args, **kwargs):
         return None, {}
     
 class Hal():
-    def __init__(self, api, marshal_with=restful.marshal_with, fields=restful.fields):
+    def __init__(self, api, marshal_with=restful.marshal_with, fields=restful.fields, debug=False):
         self.api = api
         self._marshal_with = marshal_with
         self.fields = fields
-        
+        self.debug = debug
+
         @api.representation('application/json+hal')
         def output_json(data, code, headers=None):
-            resp = make_response(json.dumps(data), code)
+            datas = json.dumps(data, indent=4) + "\n" if self.debug else json.dumps(data)
+            resp = make_response(datas, code)
             resp.headers.extend(headers or {})
             return resp
 
