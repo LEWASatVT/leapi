@@ -21,7 +21,7 @@ class Observation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     value = db.Column(db.Float)
     stderr = db.Column(db.Float)
-    datetime = db.Column(db.DateTime)
+    datetime = db.Column(db.DateTime(timezone=True))
     site_id = db.Column(db.String, db.ForeignKey('sites.id'), nullable=False)
     instrument_name = db.Column(db.String)
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id') ) #TODO once established, make nullable=False
