@@ -51,7 +51,7 @@ offset_model = api.model('offset',
                          {'value': fields.Float(),
                           'type_id': fields.Integer(),
                           'type': fields.String()
-                          })
+                      })
 
 observation_model = api.model('BaseObservation',
                               {
