@@ -1,7 +1,10 @@
+import logging
+
 from leapi import app
 
 def builderror_handler(error, endpoint, values):
     if app.debug:
+        logging.error("url BuildError for endpoint {} with values {}".format(endpoint,values))
         return str(error)
     else:
         return None
