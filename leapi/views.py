@@ -42,6 +42,10 @@ api.add_resource(MetricGroupList,
                  '/sites/<string:site_id>/metricgroups'
                  )
 
+api.add_resource(MetricGroup,
+                 '/sites/<string:site_id>/metricgroups/<string:name>'
+                 )
+
 @app.errorhandler(404)
 def not_found(error):
     return make_response(json.dumps({'error': 'Not found'}), 404)
