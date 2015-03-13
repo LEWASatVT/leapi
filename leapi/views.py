@@ -20,7 +20,7 @@ api.add_resource(SensorResource,
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors', 
                  '/sites/<string:site_id>/instruments/<string:instrument_name>/sensors/<int:id>')
 
-api.add_resource(CountedMetricResource, '/sites/<string:site_id>/metrics/<int:id>')
+api.add_resource(CountedMetricResource, '/sites/<string:site_id>/metrics/<int:id>', endpoint='metricresource')
 api.add_resource(CountedMetricList, '/sites/<string:site_id>/metrics')
 
 api.add_resource(UnitResource, '/units', '/units/<int:id>')
@@ -37,6 +37,10 @@ api.add_resource(ObservationResource,
 api.add_resource(TimeseriesResource, 
                  '/sites/<string:site_id>/metrics/<int:metric_id>/timeseries',
 )
+
+api.add_resource(MetricGroupList,
+                 '/sites/<string:site_id>/metricgroups'
+                 )
 
 @app.errorhandler(404)
 def not_found(error):
