@@ -32,7 +32,6 @@ class SiteResource(Resource):
             site = Site.query.join(Instrument).all()
         else:
             site = Site.query.get_or_404(id)
-            #setattr(site, '_embedded', {'instruments': site.instruments.all()})
         return site
 
 class SiteList(Resource):
