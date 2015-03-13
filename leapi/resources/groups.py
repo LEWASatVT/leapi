@@ -7,7 +7,9 @@ from leapi.resources.metric import metric_fields
 
 group_fields = api.model('group', 
                          {
+                             'id': fields.Integer(),
                              'name': fields.String(),
+                             'parent_id': fields.Integer()
                          })
 
 class MetricGroup(Resource):
