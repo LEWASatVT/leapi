@@ -6,6 +6,8 @@ class Config(object):
     TESTING = False
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URI']
     SQLALCHEMY_MIGRATE_REPO = os.path.join(basedir, 'db_repository')
+    LOGFILE = '/var/log/flask/leapi.log'
+    MAGICSECRET = "changethisafterssl"
 
 class ProductionConfig(Config):
     DEBUG = False
@@ -18,7 +20,6 @@ class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
     SERVER_NAME = "localhost:5050"
-    MAGICSECRET = "changethisafterssl"
     
 class TestingConfig(Config):
     TESTING = True
