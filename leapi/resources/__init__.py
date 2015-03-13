@@ -5,6 +5,7 @@ from metric import MetricResource, CountedMetricResource, CountedMetricList
 from observation import ObservationResource, ObservationList
 from unit import UnitResource
 from timeseries import TimeseriesResource
+from groups import MetricGroup, MetricGroupList
 
 __all__ = [ 'SiteResource', 'SiteList', 'InstrumentResource', 
             'SensorResource',
@@ -13,5 +14,6 @@ __all__ = [ 'SiteResource', 'SiteList', 'InstrumentResource',
             'CountedMetricList',
             'ObservationResource', 'ObservationList',
             'UnitResource',
-            'TimeseriesResource'
+            'TimeseriesResource',
+            'MetricGroup', 'MetricGroupList'
             ]

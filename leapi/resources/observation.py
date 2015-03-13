@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError,DataError
 from sqlalchemy.orm.exc import FlushError
 
 from flask.ext.restplus import fields, Resource
-from flask.ext.restful import abort
+from flask.ext.restful import abort, inputs
 
 from leapi import db, app, api, hal
 from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType
@@ -29,7 +29,7 @@ def by_id_or_filter(obj, args, atname=None):
 
 parser = api.parser()
 parser.add_argument('value', type=float, required=True, help="value observed", location='json')
-parser.add_argument('datetime', type=str, required=True, help="date and time observation was made", location='json')
+parser.add_argument('datetime', type=inputs.datetime_from_rfc822, required=True, help="date and time observation was made", location='json')
 parser.add_argument('units', type=dict, required=True, help="units observation value is in", location='json')
 parser.add_argument('metric', type=dict, required=True, help="metric the observation observed", location='json')
 parser.add_argument('instrument', type=dict, help="instrument that made the observation")
@@ -109,13 +109,17 @@ def prep_observation(odoc, site_id, instrument_name):
     r = None
 
     auth = False
-    if ('MAGICSECRET' in app.config) and (args['magicsecret'] == app.config['MAGICSECRET']):
-        auth = True
-    if request.environ['CLIENT_VERIFY'] == "SUCCESS":
-        #http://stackoverflow.com/a/23654676
-        cert = request.environ['CLIENT_CERT'].split("/")[1:]
-        cert = {p[0]: p[1] for p in [a.split("=") for a in cert]}
-        if cert["CN"].split(".")[0] == site_id:
+    if 'CLIENT_VERIFY' in request.environ:
+        # use SSL auth
+        if request.environ['CLIENT_VERIFY'] == "SUCCESS":
+            #http://stackoverflow.com/a/23654676
+            cert = request.environ['CLIENT_CERT'].split("/")[1:]
+            cert = {p[0]: p[1] for p in [a.split("=") for a in cert]}
+            if cert["CN"].split(".")[0] == site_id:
+                auth = True
+    else:
+        #Fall back to password auth
+        if ('MAGICSECRET' in app.config) and (args['magicsecret'] == app.config['MAGICSECRET']):
             auth = True
     if not auth:
         return (r, 403, [])

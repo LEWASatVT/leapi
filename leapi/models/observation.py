@@ -13,7 +13,7 @@ class OffsetType(db.Model):
 
 class Observation(db.Model):
     __tablename__ = 'observations'
-    __table_args__ = (UniqueConstraint('site_id','instrument_name','metric_id', 'datetime',name='key_1'),
+    __table_args__ = (UniqueConstraint('site_id','instrument_name','metric_id', 'datetime', 'value', 'offset_value', 'offset_type_id', name='unique_observation'),
                       ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name'],name='observation_instrument_fk'),)
 
     #After adding instrument_name column:
@@ -21,7 +21,7 @@ class Observation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     value = db.Column(db.Float)
     stderr = db.Column(db.Float)
-    datetime = db.Column(db.DateTime)
+    datetime = db.Column(db.DateTime(timezone=True))
     site_id = db.Column(db.String, db.ForeignKey('sites.id'), nullable=False)
     instrument_name = db.Column(db.String)
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id') ) #TODO once established, make nullable=False

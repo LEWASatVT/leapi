@@ -11,15 +11,18 @@ class Config(object):
 
 class ProductionConfig(Config):
     DEBUG = False
-
+    LOGFILE = os.environ.get('LEWAS_LOG_FILE', '/var/log/flask/leapi_production.log')
+    
 class StagingConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
+    LOGGFILE = 'leapi_staging.log'
 
 class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
     SERVER_NAME = "localhost:5050"
-    
+    LOGGFILE = 'leapi_development.log'
+
 class TestingConfig(Config):
     TESTING = True

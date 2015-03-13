@@ -4,7 +4,6 @@ from leapi.hal import Resource
 import flask.ext.restplus as restful
 
 fields = {
-    'id': restful.fields.Integer(),
     'name': restful.fields.String(),
     'manufacturer': restful.fields.String(),
     'model': restful.fields.String(),
