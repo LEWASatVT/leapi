@@ -28,6 +28,7 @@ def inputList(typefn, delim=","):
 parser = api.parser()
 parser.add_argument('metrics', type=inputList(inputs.natural), required=True, help="list of metric id's to include in archive", location='args')
 parser.add_argument('interval', type=inputs.iso8601interval, required=True, help="iso8601 formated time interval", location='args')
+parser.add_argument('instrument', type=str)
 
 ##TODO print header row
 @app.route('/sites/<string:site_id>/archive.csv')
@@ -35,7 +36,8 @@ def generate_archive(site_id):
     args = parser.parse_args()
     
     filterexp = [Observation.site_id==site_id,Observation.offset_value == None]
-
+    if args['instrument']:
+        filterexp.append(Observation.instrument_name==args['instrument'])
     filterexp.append(Observation.metric_id.in_(args['metrics']))
     filterexp.append(Observation.datetime.between(*args['interval']))
 
@@ -53,7 +55,7 @@ def generate_archive(site_id):
             headers[id] = metrics[id]
             
         print("using headers: {}".format(headers.keys()))
-        q = Observation.query.filter(*filterexp).order_by(Observation.datetime.desc())
+        q = Observation.query.filter(*filterexp).order_by(Observation.datetime)
         yield ",".join(['datetime'] + headers.values()) + "\n"
 
 
