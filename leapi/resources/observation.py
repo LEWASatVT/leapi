@@ -10,7 +10,7 @@ from flask.ext.restful import abort, inputs
 from leapi import db, app, api, hal
 from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType
 from leapi.resources import metric, unit, instrument, sensor
-from leapi.exceptions import AuthFailure, InvalidUsage 
+from leapi.exceptions import AuthFailure, InvalidUsage, StorageIntegrityError
 
 def by_id_or_filter(obj, args, atname=None):
     '''find object by id if supplied, and if not construct filter from args'''
@@ -135,8 +135,6 @@ def prep_observation(odoc, site_id, instrument_name):
         else:
             logging.debug('magicsecret fail: {} != {}'.format(args['magicsecret'],app.config['MAGICSECRET']))
     if not auth:
-        #raise AuthFailure(auth_messages)
-        #api.abort(403, message=auth_messages)
         return (r, 403, auth_messages)
 
     # TODO: When materialize views are implemented we can use CountedMetric
@@ -149,8 +147,7 @@ def prep_observation(odoc, site_id, instrument_name):
     if metric == None:
         messages.append("No metric with: {}".format(args['metric']))
     if len(messages) > 0:
-        print("errors: {}".format(messages))
-        #api.abort(400, message=auth_messages + messages)
+        logging.warn("errors: {}".format(messages))
         return (r, 400, messages)
 
     r = Observation(datetime=args['datetime'], value=args['value'], site_id=site_id)
@@ -241,7 +238,7 @@ class ObservationList(Resource):
             codes = [ prep_observation(request.json, site_id, instrument_name) ]
 
         for (r,code,errors) in codes:
-            if code == 201:
+            if code == 201: #TODO: is there a return code for "partial success"?
                 db.session.add(r)
 
         #TODO: On some of these errors, IntegrityError in particular, it may make sense
@@ -252,11 +249,12 @@ class ObservationList(Resource):
         except DataError, e:
             api.abort(400, message=dict(data_error=str(e),r=r))
         except IntegrityError, e:
-            print("IntegrityError: {}".format(e))
-            api.abort(409, message=dict(integrity_error=e.message))
+            raise StorageIntegrityError(e.message)
+            #api.abort(409, message=dict(integrity_error=e.message))
         except FlushError, e:
             api.abort(500, message=dict(flush_error=e.message))
         else:
             #Return a list of the response data, and max status code across all observations
             response = [ {'status': status, 'response': data, 'messages': messages} for (data,status,messages) in codes ]
-        return response, max( [ s for d,s,m in codes ] )
+        status_code = max( [ s for d,s,m in codes ] )
+        return response, status_code
