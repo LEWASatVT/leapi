@@ -1,4 +1,5 @@
 from flask import request
+import logging
 
 from sqlalchemy.exc import IntegrityError,DataError
 from sqlalchemy.orm.exc import FlushError
@@ -109,6 +110,7 @@ def prep_observation(odoc, site_id, instrument_name):
     r = None
 
     auth = False
+    auth_messages = []
     if 'CLIENT_VERIFY' in request.environ:
         # use SSL auth
         if request.environ['CLIENT_VERIFY'] == "SUCCESS":
@@ -117,12 +119,23 @@ def prep_observation(odoc, site_id, instrument_name):
             cert = {p[0]: p[1] for p in [a.split("=") for a in cert]}
             if cert["CN"].split(".")[0] == site_id:
                 auth = True
+            else:
+                auth_messages.append('CN does not match site_id');
+        else:
+            auth_messages.append('CLIENT_VERIFY != "SUCCESS"');
     else:
+        auth_messages.append('CLIENT_VERIFY not in request.environ')
+
+    if not auth and app.config.get('PASSWORD_FALLBACK', True):
+        auth_messages.append('fallback to password auth')
         #Fall back to password auth
         if ('MAGICSECRET' in app.config) and (args['magicsecret'] == app.config['MAGICSECRET']):
             auth = True
+        else:
+            logging.debug('magicsecret fail: {} != {}'.format(args['magicsecret'],app.config['MAGICSECRET']))
     if not auth:
-        return (r, 403, [])
+        api.abort(403, message=auth_messages)
+        #return (r, 403, messages)
 
     # TODO: When materialize views are implemented we can use CountedMetric
     metric = by_id_or_filter(Metric, args, 'metric')
@@ -135,7 +148,8 @@ def prep_observation(odoc, site_id, instrument_name):
         messages.append("No metric with: {}".format(args['metric']))
     if len(messages) > 0:
         print("errors: {}".format(messages))
-        return (r, 400, messages)
+        api.abort(400, message=auth_messages + messages)
+        #return (r, 400, messages)
 
     r = Observation(datetime=args['datetime'], value=args['value'], site_id=site_id)
 
@@ -150,6 +164,10 @@ def prep_observation(odoc, site_id, instrument_name):
         offset = OffsetType.query.filter_by(description=args['offset']['type']).first()
         r.offset_value = args['offset']['value']
         r.offset_type_id = offset.id
+    else:
+        r.offset_value = 0;
+        r.offset_type_id = OffsetType.query.filter_by(description='none').first().id
+
     return (r, 201, messages)
 
     #@api.doc(params={'site_id': 'A site ID', 'instrument_id': 'An instrument ID'})
@@ -158,7 +176,7 @@ class ObservationResource(Resource):
 
     #fields=get_fields
     
-    @hal.marshal_with(get_fields, embedded=_embedded)
+    @hal.marshal_with(get_fields)
     @api.doc(description="Not particularly useful for timeseries analysis, that's what the timeseries resource is for")
     def get(self, site_id, id, instrument_name=None):
         '''get a particular observation or list of observations. Not terribly useful, you probably want timeseries'''
@@ -211,7 +229,7 @@ class ObservationList(Resource):
         '''Post a new observation'''
         if not request.json:
             print("request was not JSON")
-            abort(400, message="request must be JSON")
+            api.abort(400, message="request must be JSON")
         errors = []
         codes = []
         
@@ -230,12 +248,12 @@ class ObservationList(Resource):
         try:
             db.session.commit()
         except DataError, e:
-            abort(400, message=dict(data_error=str(e),r=r))
+            api.abort(400, message=dict(data_error=str(e),r=r))
         except IntegrityError, e:
             print("IntegrityError: {}".format(e))
-            abort(409, message=dict(integrity_error=e.message))
+            api.abort(409, message=dict(integrity_error=e.message))
         except FlushError, e:
-            abort(500, message=dict(flush_error=e.message))
+            api.abort(500, message=dict(flush_error=e.message))
         else:
             #Return a list of the response data, and max status code across all observations
             response = [ {'status': status, 'response': data, 'messages': messages} for (data,status,messages) in codes ]
