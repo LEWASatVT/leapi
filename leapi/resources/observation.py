@@ -156,9 +156,9 @@ def prep_observation(odoc, site_id, instrument_name):
 class ObservationResource(Resource):
     '''Show a single observation made or post a new one. Primary resource used by sensor layer'''
 
-    fields=get_fields
+    #fields=get_fields
     
-    @hal.marshal_with(fields, embedded=_embedded)
+    @hal.marshal_with(get_fields, embedded=_embedded)
     @api.doc(description="Not particularly useful for timeseries analysis, that's what the timeseries resource is for")
     def get(self, site_id, id, instrument_name=None):
         '''get a particular observation or list of observations. Not terribly useful, you probably want timeseries'''
@@ -178,9 +178,9 @@ class ObservationResource(Resource):
         return r
 
 class ObservationList(Resource):
-    fields=get_fields
+    #fields=get_fields
     
-    @hal.marshal_with(fields, embedded=_embedded, as_list=True)
+    @hal.marshal_with(get_fields, embedded=_embedded, as_list=True)
     @api.doc(parser=fetch_parser)
     def get(self, site_id, instrument_name=None):
         args = fetch_parser.parse_args()
