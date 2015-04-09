@@ -63,7 +63,7 @@ parser.add_argument('filename', type=str)
 def generate_archive(site_id):
     args = parser.parse_args()
     metric_ids = [ int(mid) for mid in args['metrics'] ]
-    filterexp = [Observation.site_id==site_id,Observation.offset_value == None]
+    filterexp = [Observation.site_id==site_id,Observation.offset_value == 0]
     filterexp.append(Observation.metric_id.in_(metric_ids))
     filterexp.append(Observation.datetime.between(*args['interval']))
     if args['instrument']:

@@ -85,7 +85,7 @@ class TimeseriesResource(Resource):
                      Observation.site_id==Site.id,
                      Observation.metric_id==Metric.id,
                      Metric.id==metric_id,
-                     Observation.offset_value.in_([None, 0])]
+                     Observation.offset_value == 0]
 
         args = parser.parse_args()
 
