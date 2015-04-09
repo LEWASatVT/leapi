@@ -135,9 +135,9 @@ def prep_observation(odoc, site_id, instrument_name):
         else:
             logging.debug('magicsecret fail: {} != {}'.format(args['magicsecret'],app.config['MAGICSECRET']))
     if not auth:
-        raise AuthFailure(auth_messages)
-        api.abort(403, message=auth_messages)
-        #return (r, 403, messages)
+        #raise AuthFailure(auth_messages)
+        #api.abort(403, message=auth_messages)
+        return (r, 403, auth_messages)
 
     # TODO: When materialize views are implemented we can use CountedMetric
     metric = by_id_or_filter(Metric, args, 'metric')
@@ -150,8 +150,8 @@ def prep_observation(odoc, site_id, instrument_name):
         messages.append("No metric with: {}".format(args['metric']))
     if len(messages) > 0:
         print("errors: {}".format(messages))
-        api.abort(400, message=auth_messages + messages)
-        #return (r, 400, messages)
+        #api.abort(400, message=auth_messages + messages)
+        return (r, 400, messages)
 
     r = Observation(datetime=args['datetime'], value=args['value'], site_id=site_id)
 
