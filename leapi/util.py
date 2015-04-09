@@ -7,7 +7,7 @@ def builderror_handler(error, endpoint, values):
         logging.error("url BuildError for endpoint {} with values {}".format(endpoint,values))
         return str(error)
     else:
-        return None
+        return "/404"
 
 app.url_build_error_handlers.append(builderror_handler)
 
