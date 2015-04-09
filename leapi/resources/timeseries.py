@@ -5,7 +5,7 @@ from datetime import datetime
 
 from flask import request
 from flask.ext.restplus import fields
-from flask.ext.restful import abort
+from flask.ext.restful import abort,inputs
 
 from sqlalchemy.exc import IntegrityError,DataError
 
@@ -29,6 +29,7 @@ data_sample = Tuple(fields.Float(required=True), fields.DateTime('iso8601', requ
 parser = api.parser()
 parser.add_argument('since', type=str, default='1 days', help="Return observations made since this date expression", location='args')
 parser.add_argument('limit', type=int, help="Limit total number of observations returned to this integer", location='args')
+parser.add_argument('interval', type=inputs.iso8601interval)
 
 dateparser =  DateParser()
 
@@ -84,15 +85,19 @@ class TimeseriesResource(Resource):
                      Observation.site_id==Site.id,
                      Observation.metric_id==Metric.id,
                      Metric.id==metric_id,
-                     Observation.offset_value == None]
+                     Observation.offset_value.in_([None, 0])]
 
         args = parser.parse_args()
 
         d = dateparser.parse(args['since'])
-        if d:
-            filterexp.append(Observation.datetime>=d)
+        if args['interval']:
+            filterexp.append(Observation.datetime.between(*args['interval']))
+            d = args['interval'][0]
         else:
-            abort(400, message="Could not parse date expression: '{}'".format(args['since']))
+            if d:
+                filterexp.append(Observation.datetime>=d)
+            else:
+                abort(400, message="Could not parse date expression: '{}'".format(args['since']))
 
         #TODO: based on use of parse_args above, can probably clean
         #this up. Remember, argparse can have differnet

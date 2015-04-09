@@ -10,6 +10,7 @@ from flask.ext.restful import abort, inputs
 from leapi import db, app, api, hal
 from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType
 from leapi.resources import metric, unit, instrument, sensor
+from leapi.exceptions import AuthFailure, InvalidUsage 
 
 def by_id_or_filter(obj, args, atname=None):
     '''find object by id if supplied, and if not construct filter from args'''
@@ -134,6 +135,7 @@ def prep_observation(odoc, site_id, instrument_name):
         else:
             logging.debug('magicsecret fail: {} != {}'.format(args['magicsecret'],app.config['MAGICSECRET']))
     if not auth:
+        raise AuthFailure(auth_messages)
         api.abort(403, message=auth_messages)
         #return (r, 403, messages)
 
