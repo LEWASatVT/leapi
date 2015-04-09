@@ -27,8 +27,8 @@ class Observation(db.Model):
     sensor_id = db.Column(db.Integer, db.ForeignKey('sensors.id') ) #TODO once established, make nullable=False
     metric_id = db.Column(db.Integer, db.ForeignKey('variables.id'), nullable=False)
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
-    offset_value = db.Column(db.Float)
-    offset_type_id = db.Column(db.Integer, db.ForeignKey('offsettypes.id') )
+    offset_value = db.Column(db.Float, nullable=False)
+    offset_type_id = db.Column(db.Integer,nullable=False, db.ForeignKey('offsettypes.id') )
 
     metric = db.relationship('Metric')
     units = db.relationship('Unit')
