@@ -129,5 +129,4 @@ def generate_archive_sql(site_id):
     if args['filename']:
         filename = args['filename']
     headers={'Content-Disposition': 'attachment; filename=' + filename}
-    print("headers: {}".format(headers))
     return Response(generate(), mimetype='text/csv', headers=headers)
