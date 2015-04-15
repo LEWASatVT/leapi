@@ -27,9 +27,10 @@ data_sample_full = api.model('datasample', {
 data_sample = Tuple(fields.Float(required=True), fields.DateTime('iso8601', required=True))
                     
 parser = api.parser()
-parser.add_argument('since', type=str, default='1 days', help="Return observations made since this date expression", location='args')
-parser.add_argument('limit', type=int, help="Limit total number of observations returned to this integer", location='args')
-parser.add_argument('interval', type=inputs.iso8601interval)
+parser.add_argument('since', type=str, default='1 days', help='Return observations made since this date expression', location='args')
+parser.add_argument('limit', type=int, help='Limit total number of observations returned to this integer', location='args')
+parser.add_argument('interval', type=inputs.iso8601interval, help='An iso8601 formatted time interval')
+parser.add_argument('method_id', type=int, help='Method id to filter by')
 
 dateparser =  DateParser()
 
@@ -86,6 +87,8 @@ class TimeseriesResource(Resource):
                      Observation.metric_id==Metric.id,
                      Metric.id==metric_id,
                      Observation.offset_value == 0]
+                     Observation.method_id == 2,
+                     Observation.offset_value == None]
 
         args = parser.parse_args()
 
@@ -104,8 +107,7 @@ class TimeseriesResource(Resource):
         #internal/external names too, which could be handy
         q = Observation.query.\
             filter(*filterexp).\
-            order_by(Observation.instrument_name,Observation.datetime.desc()).\
-            group_by(Observation.instrument_name,Observation.id)
+            order_by(Observation.instrument_name,Observation.datetime.desc())
         nodata = False
         if args['limit']:
             q = q.limit(args['limit'])

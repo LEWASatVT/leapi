@@ -1,3 +1,5 @@
+from itertools import islice
+
 import logging
 
 from leapi import app
@@ -24,3 +26,12 @@ if not app.debug:
         '[in %(pathname)s:%(lineno)d]'
     ))
 
+def window(seq, n=2):
+    '''return a window of width in over iterator seq'''
+    it = iter(seq)
+    result = tuple(islice(it,n))
+    if len(result) == n:
+        yield result
+    for elem in it:
+        result = result[1:] + (elem,)
+        yield result

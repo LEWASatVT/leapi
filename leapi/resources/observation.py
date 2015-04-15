@@ -1,5 +1,6 @@
 from flask import request
 import logging
+from datetime import timedelta
 
 from sqlalchemy.exc import IntegrityError,DataError
 from sqlalchemy.orm.exc import FlushError
@@ -11,7 +12,35 @@ from leapi import db, app, api, hal
 from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType
 from leapi.resources import metric, unit, instrument, sensor
 from leapi.exceptions import AuthFailure, InvalidUsage, StorageIntegrityError
+from leapi.filters import avg_filter
 
+def filters_for(obs):
+    '''This should move somewhere else eventually'''
+    if obs.metric_id == 34 and obs.method_id == 1 and obs.offset_value == None:
+        # downstream velocity and raw measurement
+        print("processing filter for {} ({})".format(obs, (obs.metric_id,obs.method_id)))
+        dt = obs.datetime
+        window = Observation.query.filter(Observation.site_id==obs.site_id,
+                                           Observation.instrument_name==obs.instrument_name,
+                                           Observation.metric_id==34,
+                                           Observation.method_id==1,
+                                           Observation.offset_value==None,
+                                           Observation.datetime >= dt - timedelta(minutes=10))\
+                                   .order_by(Observation.datetime).all()
+        filteredObservation = avg_filter(window, 2)
+        filteredObservation.derived_from = window
+        db.session.add(filteredObservation)
+        try:
+            db.session.commit()
+        except DataError, e:
+            logging.error("FilterError {}, observation: ".format(e, filteredObservation))
+        except IntegrityError, e:
+            logging.error("FilterError {}, observation: ".format(e, filteredObservation))
+        except FlushError, e:
+            logging.error("FilterError {}, observation: ".format(e, filteredObservation))
+        else:
+            print("added filtered observation {}".format(filteredObservation.id))
+            
 def by_id_or_filter(obj, args, atname=None):
     '''find object by id if supplied, and if not construct filter from args'''
     atname = obj.__name__.lower() if atname == None else atname
@@ -63,7 +92,8 @@ observation_model = api.model('BaseObservation',
                                   'offset_type_id': fields.Integer(),
                                   'offset': fields.Nested(offset_model), 
                                   'stderr': fields.Float(description='Standard error associated with value'),
-                                  'site_id': fields.String(required=True)
+                                  'site_id': fields.String(required=True),
+                                  'method_id': fields.Integer(default=1)
                               })
 
 get_fields = api.extend('Observation', observation_model, 
@@ -158,7 +188,8 @@ def prep_observation(odoc, site_id, instrument_name):
     r.metric_id = metric.id
     r.units = unit
     r.stderr = args['stderr']
-
+    r.method_id = args['method_id']
+    
     if args['offset']:
         offset = OffsetType.query.filter_by(description=args['offset']['type']).first()
         r.offset_value = args['offset']['value']
@@ -255,6 +286,8 @@ class ObservationList(Resource):
             api.abort(500, message=dict(flush_error=e.message))
         else:
             #Return a list of the response data, and max status code across all observations
+            [ filters_for(r) for (r, code, errors) in codes if code == 201 ]
+
             response = [ {'status': status, 'response': data, 'messages': messages} for (data,status,messages) in codes ]
         status_code = max( [ s for d,s,m in codes ] )
         return response, status_code

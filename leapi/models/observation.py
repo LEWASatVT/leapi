@@ -2,6 +2,12 @@ from leapi import db
 from leapi import hal
 from sqlalchemy import UniqueConstraint, ForeignKeyConstraint
 
+derived_from_table = db.Table('derived_from', db.metadata,
+                        #TODO: add constraint derived_from_id must be different from observation_id      
+                        db.Column('derived_from_id', db.Integer, db.ForeignKey('observations.id'), primary_key=True),
+                        db.Column('observation_id', db.Integer, db.ForeignKey('observations.id'), primary_key=True)
+              )
+
 class OffsetType(db.Model):
     __tablename__ = 'offsettypes'
 
@@ -13,7 +19,10 @@ class OffsetType(db.Model):
 
 class Observation(db.Model):
     __tablename__ = 'observations'
-    __table_args__ = (UniqueConstraint('site_id','instrument_name','metric_id', 'datetime', 'value', 'offset_value', 'offset_type_id', name='unique_observation'),
+    __table_args__ = (UniqueConstraint('site_id','instrument_name','metric_id',
+                                       'datetime', 'value', 'offset_value',
+                                       'offset_type_id','method_id',
+                                       name='unique_observation'),
                       ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name'],name='observation_instrument_fk'),)
 
     #After adding instrument_name column:
@@ -29,12 +38,19 @@ class Observation(db.Model):
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
     offset_value = db.Column(db.Float, nullable=False)
     offset_type_id = db.Column(db.Integer, db.ForeignKey('offsettypes.id'), nullable=False )
-
+    method_id = db.Column(db.Integer, db.ForeignKey('methods.id'), default=0)
+                          
+    method = db.relationship('Method')
     metric = db.relationship('Metric')
     units = db.relationship('Unit')
     instrument = db.relationship('Instrument', foreign_keys=[site_id,instrument_name]) 
     sensor = db.relationship('Sensor')
     offset_type = db.relationship('OffsetType')
+    derived_from = db.relationship('Observation',
+                                   secondary=derived_from_table,
+                                   secondaryjoin=id==derived_from_table.c.derived_from_id,
+                                   primaryjoin=id==derived_from_table.c.observation_id,
+                                   backref="used_to_derive")
 
     @property
     def offset(self):
@@ -52,4 +68,7 @@ class Observation(db.Model):
         return unicode(self).encode('utf-8')
 
     def __repr__(self):
-        return "Observation {}: {}({}), {}".format(self.id, self.value, self.units.abbv, {'instrument': self.instrument.name, 'site_id': self.site.id}).encode('utf-8')
+        return "Observation {}: {}({}), {}".format(getattr(self,'id','unbound'),
+                                                   self.value,
+                                                   self.units.abbv,
+                                                   {'instrument': self.instrument.name, 'site_id': self.site.id}).encode('utf-8')

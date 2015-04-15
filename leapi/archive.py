@@ -87,17 +87,17 @@ def generate_archive(site_id):
         q = Observation.query.filter(*filterexp).order_by(Observation.datetime)
         yield ",".join(['datetime'] + headers.values()) + "\n"
 
+        ## SELECT o.datetime AS datetime,a.value,b.value FROM (SELECT datetime,value,metric_id FROM observations WHERE metric_id IN (6,14) AND datetime BETWEEN '2015-02-11' AND '2015-02-16') AS o LEFT JOIN (SELECT datetime,value,metric_id FROM observations WHERE metric_id=6) a ON a.datetime=o.datetime LEFT JOIN (SELECT datetime,value,metric_id FROM observations WHERE metric_id=14) b ON b.datetime=o.datetime GROUP BY o.datetime,a.value,b.value ORDER BY o.datetime;
+
         def float_or_nan(value=None):
             if value is not None:
                 return float(value)
             else:
-                return 'ND'
+                return ''
         
 
         for g,k in itertools.groupby(q, lambda a: datetime(a.datetime.year,a.datetime.month,a.datetime.day,a.datetime.hour,a.datetime.minute)):
             row = defaultdict(float_or_nan)
-            #row = list(k)
-            #row = dict([ ("{} {}".format(o.metric.medium, o.metric.name), o.value) for o in row ])
             for o in k:
                 try:
                     row[headers[o.metric_id]] = o.value
