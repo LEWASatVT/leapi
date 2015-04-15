@@ -122,4 +122,12 @@ def generate_archive_sql(site_id):
             yield ",".join([ str(r) for r in row]) + "\n"
         ## SELECT o.datetime AS datetime,a.value,b.value FROM (SELECT date_trunc('minute', datetime) AS datetime,value,metric_id FROM observations WHERE datetime BETWEEN '2015-02-11' AND '2015-02-16') AS o LEFT JOIN (SELECT date_trunc('minute', datetime) AS datetime,value,metric_id FROM observations WHERE metric_id=6) a ON a.datetime=o.datetime LEFT JOIN (SELECT date_trunc('minute', datetime) AS datetime,value,metric_id FROM observations WHERE metric_id=14) b ON b.datetime=o.datetime
         
-    return Response(generate(), mimetype='text/csv')
+    headers={}
+    filename = "_until_".join([ dt.isoformat() for dt in args['interval']]) + ".csv"
+    if args['instrument']:
+        filename = args['instrument'] + "_" + filename
+    if args['filename']:
+        filename = args['filename']
+    headers={'Content-Disposition': 'attachment; filename=' + filename}
+    print("headers: {}".format(headers))
+    return Response(generate(), mimetype='text/csv', headers=headers)
