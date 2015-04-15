@@ -58,60 +58,6 @@ parser.add_argument('interval', type=inputs.iso8601interval, required=True, help
 parser.add_argument('instrument', type=str)
 parser.add_argument('filename', type=str)
 
-##TODO print header row
-@app.route('/sites/<string:site_id>/archive_old.csv')
-def generate_archive(site_id):
-    args = parser.parse_args()
-    metric_ids = [ int(mid) for mid in args['metrics'] ]
-    filterexp = [Observation.site_id==site_id,Observation.offset_value == 0]
-    filterexp.append(Observation.metric_id.in_(metric_ids))
-    filterexp.append(Observation.datetime.between(*args['interval']))
-    if args['instrument']:
-        filterexp.append(Observation.instrument_name==args['instrument'])
-    
-    def generate():
-        print("generating query for metrics {} between {} and {}".format(metric_ids, *args['interval']))
-        #q = db.session.query(\
-        #                     func.date_trunc('minute',Observation.datetime)\
-        #).select_from(Observation).\
-        #    filter(*filterexp).\
-        #    order_by(Observation.datetime.desc())
-        mq = Metric.query.filter(Metric.id.in_(metric_ids))
-        metrics = dict([ (m.id, " ".join([m.medium,m.name])) for m in mq ])
-        headers = OrderedDict()
-        for id in args['metrics']:
-            headers[int(id)] = metrics[int(id)]
-            if id.stderr:
-                headers[str(id)] = metrics[int(id)] + " stderr"
-            
-        q = Observation.query.filter(*filterexp).order_by(Observation.datetime)
-        yield ",".join(['datetime'] + headers.values()) + "\n"
-
-        def float_or_nan(value=None):
-            if value is not None:
-                return float(value)
-            else:
-                return 'ND'
-        
-
-        for g,k in itertools.groupby(q, lambda a: datetime(a.datetime.year,a.datetime.month,a.datetime.day,a.datetime.hour,a.datetime.minute)):
-            row = defaultdict(float_or_nan)
-            #row = list(k)
-            #row = dict([ ("{} {}".format(o.metric.medium, o.metric.name), o.value) for o in row ])
-            #row['datetime'] = 
-            for o in k:
-                try:
-                    row[headers[o.metric_id]] = o.value
-                    row[headers[o.metric_id] + " stderr"] = o.stderr
-                except KeyError as e:
-                    print("WTF, no {} in {}".format(o.metric_id, headers))
-            yield ','.join([str(g)] + [ str(row[headers[k]]) for k in headers]) + '\n'
-
-    headers={}
-    if args['filename']:
-        headers={'Content-Disposition': 'attachment; filename=' + args['filename']}
-    return Response(generate(), mimetype='text/csv', headers=headers)
-
 @app.route('/sites/<string:site_id>/archive.csv')
 def generate_archive_sql(site_id):
     args = parser.parse_args()
@@ -125,49 +71,52 @@ def generate_archive_sql(site_id):
     if args['instrument']:
         filterexp.append(Observation.instrument_name==args['instrument'])
     
-    def generate():
-        mq = Metric.query.filter(Metric.id.in_(metric_ids))
-        metrics = dict([ (m.id, " ".join([m.medium,m.name])) for m in mq ])
+    mq = Metric.query.filter(Metric.id.in_(metric_ids))
+    metrics = dict([ (m.id, " ".join([m.medium,m.name])) for m in mq ])
 
-        def clean_label(alabel):
-            return alabel.replace('%', '%%')
-            
-        labels = [ clean_label(metrics[int(m.id)]) for m in mq ]
+    def clean_label(alabel):
+        return alabel.replace('%', '%%')
 
-        base_q = db.session.query(
-            func.date_trunc('minute', Observation.datetime).label("datetime"), 
-            Observation.value, Observation.stderr, 
-            Observation.metric_id, 
-            Observation.offset_value
-        ).filter(*filterexp).order_by(Observation.datetime).subquery()
+    # build a base query that selects the requested metric_ids for the requested date range
+    base_q = db.session.query(
+        func.date_trunc('minute', Observation.datetime).label("datetime"), 
+        Observation.value, Observation.stderr, 
+        Observation.metric_id, 
+        Observation.offset_value
+    ).filter(*filterexp).order_by(Observation.datetime).subquery()
 
-        def qlabels(mid):
-            l = clean_label(metrics[int(mid)])
-            v = [base_q.c.value.label(l)]
-            if mid.stderr:
-                v.append(base_q.c.stderr.label(l + ' stderr'))
+    def qlabels(mid):
+        l = clean_label(metrics[int(mid)])
+        v = [base_q.c.value.label(l)]
+        if mid.stderr:
+            v.append(base_q.c.stderr.label(l + ' stderr'))
             print("qvalue: {}".format(v))
-            return v
+        return v
 
-        def qcolumns(vq, mid):
-            l = clean_label(metrics[int(mid)])
-            if mid.stderr:
-                return (getattr(vq.c, l), getattr(vq.c, l + ' stderr'))
-            else:
-                return (getattr(vq.c, l),)
+    def qcolumns(vq, mid):
+        l = clean_label(metrics[int(mid)])
+        if mid.stderr:
+            return (getattr(vq.c, l), getattr(vq.c, l + ' stderr'))
+        else:
+            return (getattr(vq.c, l),)
 
-        value_qs = [ db.session.query(base_q.c.datetime, *qlabels(m))\
-                     .filter(base_q.c.metric_id==int(m),base_q.c.offset_value==0).subquery() for m in args['metrics'] ]
-        # make a touble of query columns
-        values = list(sum([ qcolumns(vq,mid) for vq, mid in zip(value_qs, args['metrics']) ], ()))
+    # create a subquery for each of the metric id's, each will be a left outer join
+    value_qs = [ db.session.query(base_q.c.datetime, *qlabels(m))\
+                 .filter(base_q.c.metric_id==int(m),base_q.c.offset_value==0).subquery() for m in args['metrics'] ]
+    # make a touble of query columns
+    values = list(sum([ qcolumns(vq,mid) for vq, mid in zip(value_qs, args['metrics']) ], ()))
 
-        q = db.session.query(base_q.c.datetime, *values)
+    # create the base query with all columns for requested metrics
+    q = db.session.query(base_q.c.datetime, *values)
 
-        for vq in value_qs:
-            q = q.outerjoin(vq, base_q.c.datetime==vq.c.datetime)
+    # add a left join of each of the metric subqueries
+    for vq in value_qs:
+        q = q.outerjoin(vq, base_q.c.datetime==vq.c.datetime)
 
-        q = q.group_by(base_q.c.datetime, *values).order_by(base_q.c.datetime)
+    # finally, group and order
+    q = q.group_by(base_q.c.datetime, *values).order_by(base_q.c.datetime)
 
+    def generate():
         yield ",".join([ d['name'].replace('%%','%') for d in q.column_descriptions]) + "\n"
         for row in q:
             yield ",".join([ str(r) for r in row]) + "\n"
