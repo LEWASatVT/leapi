@@ -8,6 +8,11 @@ derived_from_table = db.Table('derived_from', db.metadata,
                         db.Column('observation_id', db.Integer, db.ForeignKey('observations.id'), primary_key=True)
               )
 
+flags_relation_table = db.Table('observation_flags', db.metadata,
+                                db.Column('observation_id', db.ForeignKey('observations.id')),
+                                db.Column('flag_id', db.ForeignKey('flags.id'))
+)
+
 class OffsetType(db.Model):
     __tablename__ = 'offsettypes'
 
@@ -51,6 +56,8 @@ class Observation(db.Model):
                                    secondaryjoin=id==derived_from_table.c.derived_from_id,
                                    primaryjoin=id==derived_from_table.c.observation_id,
                                    backref="used_to_derive")
+    flags = db.relationship('Flag',
+                            secondary=flags_relation_table)
 
     @property
     def offset(self):

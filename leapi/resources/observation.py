@@ -9,7 +9,7 @@ from flask.ext.restplus import fields, Resource
 from flask.ext.restful import abort, inputs
 
 from leapi import db, app, api, hal
-from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType
+from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType,Flag
 from leapi.resources import metric, unit, instrument, sensor
 from leapi.exceptions import AuthFailure, InvalidUsage, StorageIntegrityError
 from leapi.filters import avg_filter
@@ -93,7 +93,8 @@ observation_model = api.model('BaseObservation',
                                   'offset': fields.Nested(offset_model), 
                                   'stderr': fields.Float(description='Standard error associated with value'),
                                   'site_id': fields.String(required=True),
-                                  'method_id': fields.Integer(default=1)
+                                  'method_id': fields.Integer(default=1),
+                                  'flags': fields.List(fields.String())
                               })
 
 get_fields = api.extend('Observation', observation_model, 
@@ -198,6 +199,11 @@ def prep_observation(odoc, site_id, instrument_name):
         r.offset_value = 0;
         r.offset_type_id = OffsetType.query.filter_by(description='none').first().id
 
+    if args['flags']:
+        for flag in args.get('flags', []):
+            flags = Flag.query.filter(Flag.name.in_(args['flags'])).all()
+            r.flags = flags
+        
     return (r, 201, messages)
 
     #@api.doc(params={'site_id': 'A site ID', 'instrument_id': 'An instrument ID'})
