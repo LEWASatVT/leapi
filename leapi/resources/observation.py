@@ -12,34 +12,6 @@ from leapi import db, app, api, hal
 from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType,Flag
 from leapi.resources import metric, unit, instrument, sensor
 from leapi.exceptions import AuthFailure, InvalidUsage, StorageIntegrityError
-from leapi.filters import avg_filter
-
-def filters_for(obs):
-    '''This should move somewhere else eventually'''
-    if obs.metric_id == 34 and obs.method_id == 1 and obs.offset_value == None:
-        # downstream velocity and raw measurement
-        print("processing filter for {} ({})".format(obs, (obs.metric_id,obs.method_id)))
-        dt = obs.datetime
-        window = Observation.query.filter(Observation.site_id==obs.site_id,
-                                           Observation.instrument_name==obs.instrument_name,
-                                           Observation.metric_id==34,
-                                           Observation.method_id==1,
-                                           Observation.offset_value==None,
-                                           Observation.datetime >= dt - timedelta(minutes=10))\
-                                   .order_by(Observation.datetime).all()
-        filteredObservation = avg_filter(window, 2)
-        filteredObservation.derived_from = window
-        db.session.add(filteredObservation)
-        try:
-            db.session.commit()
-        except DataError, e:
-            logging.error("FilterError {}, observation: ".format(e, filteredObservation))
-        except IntegrityError, e:
-            logging.error("FilterError {}, observation: ".format(e, filteredObservation))
-        except FlushError, e:
-            logging.error("FilterError {}, observation: ".format(e, filteredObservation))
-        else:
-            print("added filtered observation {}".format(filteredObservation.id))
             
 def by_id_or_filter(obj, args, atname=None):
     '''find object by id if supplied, and if not construct filter from args'''
@@ -292,8 +264,6 @@ class ObservationList(Resource):
             api.abort(500, message=dict(flush_error=e.message))
         else:
             #Return a list of the response data, and max status code across all observations
-            [ filters_for(r) for (r, code, errors) in codes if code == 201 ]
-
             response = [ {'status': status, 'response': data, 'messages': messages} for (data,status,messages) in codes ]
         status_code = max( [ s for d,s,m in codes ] )
         return response, status_code
