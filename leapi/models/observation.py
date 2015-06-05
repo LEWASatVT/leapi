@@ -26,7 +26,7 @@ class Observation(db.Model):
     __tablename__ = 'observations'
     __table_args__ = (UniqueConstraint('site_id','instrument_name','metric_id',
                                        'datetime', 'value', 'offset_value',
-                                       'offset_type_id','method_id',
+                                       'offset_type_id',
                                        name='unique_observation'),
                       ForeignKeyConstraint(['site_id','instrument_name'], ['instruments.site_id','instruments.name'],name='observation_instrument_fk'),)
 
@@ -43,9 +43,7 @@ class Observation(db.Model):
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
     offset_value = db.Column(db.Float, nullable=False)
     offset_type_id = db.Column(db.Integer, db.ForeignKey('offsettypes.id'), nullable=False )
-    method_id = db.Column(db.Integer, db.ForeignKey('methods.id'), default=0)
                           
-    method = db.relationship('Method')
     metric = db.relationship('Metric')
     units = db.relationship('Unit')
     instrument = db.relationship('Instrument', foreign_keys=[site_id,instrument_name]) 
