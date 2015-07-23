@@ -6,6 +6,7 @@ from observation import ObservationResource, ObservationList
 from unit import UnitResource
 from timeseries import TimeseriesResource
 from groups import MetricGroup, MetricGroupList
+from media import MediaResource, MediaListResource, MediaContentResource
 
 __all__ = [ 'SiteResource', 'SiteList', 'InstrumentResource', 
             'SensorResource',
@@ -15,5 +16,6 @@ __all__ = [ 'SiteResource', 'SiteList', 'InstrumentResource',
             'ObservationResource', 'ObservationList',
             'UnitResource',
             'TimeseriesResource',
-            'MetricGroup', 'MetricGroupList'
+            'MetricGroup', 'MetricGroupList',
+            'MediaResource', 'MediaListResource','MediaContentResource'
             ]
