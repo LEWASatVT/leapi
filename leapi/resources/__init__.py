@@ -7,6 +7,7 @@ from unit import UnitResource
 from timeseries import TimeseriesResource
 from groups import MetricGroup, MetricGroupList
 from flag import FlagList
+from media import MediaResource, MediaListResource, MediaContentResource
 
 __all__ = [ 'SiteResource', 'SiteList', 'InstrumentResource', 
             'SensorResource',
@@ -17,5 +18,6 @@ __all__ = [ 'SiteResource', 'SiteList', 'InstrumentResource',
             'UnitResource',
             'TimeseriesResource',
             'MetricGroup', 'MetricGroupList',
-            'FlagList'
+            'FlagList',
+            'MediaResource', 'MediaListResource','MediaContentResource'
             ]

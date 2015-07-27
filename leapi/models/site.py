@@ -8,6 +8,9 @@ class Site(db.Model):
     description = db.Column(db.Unicode)
     instruments = db.relationship('Instrument', backref='site', lazy='dynamic')
     observations = db.relationship('Observation', backref='site', lazy="dynamic")
+    location_id = db.Column(db.ForeignKey('locations.id'))
+
+    location = db.relationship('Location')
 
     def __repr__(self):
         return "{}: {}".format(self.id, self.name)

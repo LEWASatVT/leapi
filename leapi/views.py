@@ -1,5 +1,5 @@
 from leapi import app, api
-from flask import make_response,redirect,url_for
+from flask import g,make_response,redirect,url_for
 import json
 
 from leapi.resources import *
@@ -48,6 +48,18 @@ api.add_resource(MetricGroup,
 
 api.add_resource(FlagList,
                  '/sites/<string:site_id>/flags')
+
+api.add_resource(MediaListResource,
+                 '/media'
+                 )
+
+api.add_resource(MediaResource,
+                 '/media/<int:id>'
+                 )
+
+api.add_resource(MediaContentResource,
+                 '/media/<int:id>/content'
+                 )
 
 @app.errorhandler(404)
 def not_found(error):
