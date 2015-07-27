@@ -44,7 +44,7 @@ def geolocation(obj):
 
 parser = api.parser()
 parser.add_argument('datetime', type=inputs.datetime_from_iso8601, required=True, help='date the media was created')
-parser.add_argument('mime_type', type=inputs.regex('image/[a-z]'), required=True, help='media mime time, currently must be some kind of image') 
+parser.add_argument('mime_type', type=inputs.regex('image/[a-z]+'), required=True, help='media mime time, currently must be some kind of image') 
 parser.add_argument('geolocation', type=geolocation, help='location media is associated with')
 
 def create_location(args):
