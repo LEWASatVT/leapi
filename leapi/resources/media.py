@@ -8,7 +8,7 @@ from flask.ext.restplus import fields, Resource
 from sqlalchemy.exc import IntegrityError
 
 from leapi import db, api, app
-from leapi.security import auth
+from leapi.security import login_required
 from leapi.models import Media, Location
 
 class LocationField(fields.Raw):
@@ -76,6 +76,7 @@ def store_request_data(data, id):
         f.write(data)
 
 class MediaContentResource(Resource):
+    @login_required
     @api.marshal_with(fields)
     def post(self, id):
         media = Media.query.get_or_404(id)
@@ -113,7 +114,7 @@ class MediaListResource(Resource):
 
         return q.all()
 
-    @auth.login_required
+    @login_required
     @api.marshal_with(fields)
     def post(self):
         args = parser.parse_args()
