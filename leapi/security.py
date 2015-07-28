@@ -12,20 +12,20 @@ app.config['SECRET_KEY'] = 'how many chucks would a woodchuck chuck if a woodchu
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore)
 
-#@app.before_first_request
-#def create_user():
-#    user_datastore.create_user(email='dmaczka@vt.edu', password='password')
-#    db.session.commit()
 
-#@auth.verify_password
-#def verify_password(username_or_token, password):
-#    user = User.verify_auth_token(username_or_token)
-#    if not user:
-#     user = User.query.filter_by(email = username_or_token).first()
-#     if not user or not user.verify_password(password):
-#         return False
-# g.user = user
-# return True
+@app.route('/users', methods = ['POST'])
+def new_user():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    if username is None or password is None:
+        abort(400) # missing arguments
+    if User.query.filter_by(username = username).first() is not None:
+        abort(400) # existing user
+    user = User(email = username)
+    user.hash_password(password)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({ 'email': user.email, 'id': user.id }), 201
 
 @app.login_manager.request_loader
 def load_user_from_request(request):
@@ -52,11 +52,12 @@ def load_user_from_request(request):
 
     # next, try to login using Basic username:password Auth
     print("load_user_from_request, trying user:password auth: {}".format(request))
-    username, password = api_key.split(':')
-    user = User.query.filter_by(email=username).first()
-    if user.verify_password(password):
-        g.user = user
-        return user
+    if api_key:
+        username, password = api_key.split(':')
+        user = User.query.filter_by(email=username).first()
+        if user and user.verify_password(password):
+            g.user = user
+            return user
     # finally, return None if both methods did not login the user
     return None
 

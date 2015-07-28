@@ -37,6 +37,10 @@ class User(db.Model, UserMixin):
         s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
         return s.dumps({'id': self.id})
 
+    @property
+    def username(self):
+        return self.email
+
     @staticmethod
     def verify_auth_token(token):
         s = Serializer(app.config['SECRET_KEY'])
