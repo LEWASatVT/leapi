@@ -1,5 +1,6 @@
 import json
 import os
+import urllib2
 
 from datetime import datetime
 from flask import g, request, make_response
@@ -9,7 +10,8 @@ from sqlalchemy.exc import IntegrityError
 
 from leapi import db, api, app
 from leapi.security import login_required
-from leapi.models import Media, Location
+from leapi.models import Media, Location, Observation, Site, Metric
+from leapi.resources import observation
 
 class LocationField(fields.Raw):
     def format(self,value):
@@ -29,7 +31,10 @@ fields = api.model('Media', {
     'datetime': fields.DateTime(required=True, description='Date and time media was created'),
     'location': fields.Nested(geolocation),
     'href': fields.Url('mediacontentresource'),
-    'user': User
+    'user': User,
+    '_embedded': fields.Nested(api.model('embedded', {
+        'observations': fields.Nested(observation.observation_model)
+        }))
 })
 
 import geojson,json
@@ -93,6 +98,11 @@ class MediaContentResource(Resource):
         return media
 
     def get(self, id):
+        if id==0:
+            response = make_response(urllib2.urlopen('http://128.173.156.152:3580/nph-jpeg.cgi').read())
+            response.headers['content-type'] = 'image/jpeg'
+            response.headers['Content-Disposition'] = 'attachment; filename=booya.jpg'
+            return response
         media = Media.query.get_or_404(id)
         #headers = {"Content-Disposition": "attachment; filename=%s" % 'hello.jpg'}
         #response = make_response((media.data, headers))
@@ -111,8 +121,26 @@ class MediaListResource(Resource):
     @api.marshal_with(fields, as_list=True)
     def get(self):
         q = Media.query
-
-        return q.all()
+        
+        filter_exp = [Site.id=='stroubles1',
+                      Observation.site_id==Site.id,
+                      Observation.metric_id==Metric.id,
+                      Metric.id==25,
+                      Observation.offset_value==0]
+        lewas_site = Site.query.get_or_404('stroubles1')
+        turb = Observation.query.\
+               filter(*filter_exp).\
+               order_by(Observation.datetime.desc()).\
+               limit(1).\
+               first()
+        local = Media()
+        print('turb: {}'.format(turb))
+        setattr(local, '_embedded', {'observations': turb})
+        setattr(local, 'id', 0)
+        local.mime_type='image/jpeg'
+        local.datetime = turb.datetime
+        local.location = lewas_site.location
+        return [local] + q.all()
 
     @login_required
     @api.marshal_with(fields)
