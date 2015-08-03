@@ -5,9 +5,10 @@ from datetime import timedelta
 from sqlalchemy.exc import IntegrityError,DataError
 from sqlalchemy.orm.exc import FlushError
 
-from flask.ext.restplus import fields, Resource
+from flask.ext.restplus import fields
 from flask.ext.restful import abort, inputs
 
+from leapi.hal import Resource
 from leapi import db, app, api, hal
 from leapi.models import Observation,Site,Sensor,Metric,CountedMetric,Unit,Instrument,OffsetType,Flag
 from leapi.resources import metric, unit, instrument, sensor
@@ -69,9 +70,17 @@ observation_model = api.model('BaseObservation',
                                   'flags': fields.List(fields.String())
                               })
 
+                            # TODO: When we get materialized views working on server we can use CountedMetricResource
+_embedded = api.model('observation_embedded',
+                     { 'metric': metric.MetricResource.fields,
+                       'units': unit.UnitResource.fields,
+                       'instrument': instrument.InstrumentResource.fields,
+                   })
+
 get_fields = api.extend('Observation', observation_model, 
                         {
                             'id': fields.Integer(),
+                            '_embedded': fields.Nested(_embedded)
                         })
 
 post_fields = api.extend('ObservationPost', observation_model,
@@ -88,13 +97,6 @@ observation_response = api.model('ObservationResponse',
                                     'response': fields.Nested(get_fields),
                                     'messages': fields.List(fields.String())
                                 })                           
-
-# TODO: When we get materialized views working on server we can use CountedMetricResource
-_embedded = { 'metric': metric.MetricResource.fields,
-              'units': unit.UnitResource.fields,
-              'instrument': instrument.InstrumentResource.fields,
-              'sensor': sensor.SensorResource.fields
-}
 
 def parse_with_model(doc, model):
     args = {}
@@ -184,7 +186,12 @@ class ObservationResource(Resource):
 
     #fields=get_fields
     
-    @hal.marshal_with(get_fields)
+    _embedded = { 'metric': metric.MetricResource.fields,
+                  'units': unit.UnitResource.fields,
+                  'instrument': instrument.InstrumentResource.fields
+              }
+
+    @hal.marshal_with(get_fields, embedded=_embedded)
     @api.doc(description="Not particularly useful for timeseries analysis, that's what the timeseries resource is for")
     def get(self, site_id, id, instrument_name=None):
         '''get a particular observation or list of observations. Not terribly useful, you probably want timeseries'''
@@ -201,6 +208,7 @@ class ObservationResource(Resource):
                 abort(404)
         else:
             r = Observation.query.get_or_404(id)
+        setattr(r,'_embedded', {'metric': r.metric })
         return r
 
 class ObservationList(Resource):

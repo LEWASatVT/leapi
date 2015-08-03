@@ -34,7 +34,7 @@ fields = api.model('Media', {
     'href': fields.Url('mediacontentresource'),
     'user': User,
     '_embedded': fields.Nested(api.model('embedded', {
-        'observations': fields.Nested(observation.observation_model)
+        'observations': fields.Nested(observation.get_fields)
         }))
 })
 
@@ -126,20 +126,25 @@ class MediaListResource(Resource):
         filter_exp = [Site.id=='stroubles1',
                       Observation.site_id==Site.id,
                       Observation.metric_id==Metric.id,
-                      Metric.id==25,
+                      Metric.id.in_([25,34]),
                       Observation.offset_value==0]
         lewas_site = Site.query.get_or_404('stroubles1')
         turb = Observation.query.\
                filter(*filter_exp).\
                order_by(Observation.datetime.desc()).\
-               limit(1).\
-               first()
+               limit(2).\
+               all()
         local = Media()
         print('turb: {}'.format(turb))
+        for t in turb:
+            setattr(t, '_embedded', {'metric': t.metric,
+                                     'units': t.units,
+                                     'instrument': t.instrument
+                                 })
         setattr(local, '_embedded', {'observations': turb})
         setattr(local, 'id', 0)
         local.mime_type='image/jpeg'
-        local.datetime = turb.datetime
+        local.datetime = turb[0].datetime
         local.location = lewas_site.location
         return [local] + q.all()
 
