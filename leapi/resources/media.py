@@ -27,6 +27,7 @@ geolocation = api.model('GeoLocation', {
     })
 
 fields = api.model('Media', {
+    'id': fields.Integer,
     'mime_type': fields.String,
     'datetime': fields.DateTime(required=True, description='Date and time media was created'),
     'location': fields.Nested(geolocation),
