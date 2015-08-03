@@ -126,14 +126,16 @@ class MediaListResource(Resource):
         filter_exp = [Site.id=='stroubles1',
                       Observation.site_id==Site.id,
                       Observation.metric_id==Metric.id,
-                      Metric.id.in_([25,34]),
+                      Metric.id.in_([25,32,30]),
                       Observation.offset_value==0]
         lewas_site = Site.query.get_or_404('stroubles1')
         turb = Observation.query.\
                filter(*filter_exp).\
                order_by(Observation.datetime.desc()).\
-               limit(2).\
+               limit(3).\
                all()
+               #group_by(Observation.metric_id,Observation.id).\
+
         local = Media()
         print('turb: {}'.format(turb))
         for t in turb:
