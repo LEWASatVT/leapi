@@ -7,8 +7,6 @@ from flask.ext.httpauth import HTTPBasicAuth
 import base64
 #auth = HTTPBasicAuth()
 
-app.config['SECRET_KEY'] = 'how many chucks would a woodchuck chuck if a woodchuck could chuck wood?'
-
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore)
 
@@ -51,7 +49,6 @@ def load_user_from_request(request):
             return user
 
     # next, try to login using Basic username:password Auth
-    print("load_user_from_request, trying user:password auth: {}".format(request))
     if api_key:
         username, password = api_key.split(':')
         user = User.query.filter_by(email=username).first()
